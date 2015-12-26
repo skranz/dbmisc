@@ -1,0 +1,11 @@
+Package: dbmisc
+Type: Package
+Title: Tools for working with databases in R
+Version: 0.1
+Date: 2015-12-26
+Author: Sebastian Kranz
+Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>
+Description: Tools for working with databases in R
+License:GPL >= 2.0
+LazyData: TRUE
+Imports: DBI, restorepoint

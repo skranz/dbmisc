@@ -1,0 +1,68 @@
+# Tables for simple user management
+
+users:
+  descr: user table
+  table:
+    userid: VARCHAR(255)
+    email: VARCHAR(255)
+    salt: VARCHAR(2048)
+    hash: VARCHAR(2048)
+    confirmed: BOOLEAN
+    create_time: DATETIME
+  indexes:
+    - "CREATE UNIQUE INDEX users1 on users (userid)"
+    - "CREATE INDEX users2 on users (confirmed)"
+
+loginlinks:
+  descr: temporary links to a shiny app
+  table:
+    linkid: VARCHAR(128)
+    userid: VARCHAR(255)
+    link_type: CHAR(20)
+    url: TEXT
+    create_time: DATETIME
+    valid_until: DATETIME
+    valid_secs: NUMERIC
+  indexes:
+    - "CREATE UNIQUE INDEX links1 on loginlinks (linkid);"
+    - "CREATE UNIQUE INDEX links2 on loginlinks (userid,create_time,linkid);"
+    - "CREATE UNIQUE INDEX links3 on loginlinks (valid_until,userid,linkid);"
+
+smtp:
+  table:
+    smtpid: VARCHAR(255)
+    yaml: TEXT
+  indexes:
+    - "CREATE UNIQUE INDEX smtpid on smtp (yaml)"
+
+# Tables for storing strategies
+
+userstrats:
+  descr: user strats
+  table:
+    stratid: 'INTEGER PRIMARY KEY' 
+    userid: VARCHAR(255)
+    strat_name: VARCHAR(512)
+    strat_version: INTEGER
+    strat_hash: CHAR(100)
+    strat_code: TEXT
+    create_time: DATETIME
+  indexes:
+    - "CREATE UNIQUE INDEX userstrats1 on userstrats (stratid)"
+    - "CREATE INDEX userstrats2 on userstrats (userid, strat_hash)"
+    - "CREATE INDEX userstrats3 on userstrats (userid, strat_name, strat_version)"
+
+statsstrats:
+  descr: statistics about user strats
+  table:
+    stratid: 'INTEGER PRIMARY KEY' 
+    userid: VARCHAR(255)
+    strat_name: VARCHAR(512)
+    strat_version: INTEGER
+    strat_hash: CHAR(100)
+    strat_code: TEXT
+    create_time: DATETIME
+  indexes:
+    - "CREATE UNIQUE INDEX userstrats1 on userstrats (stratid)"
+    - "CREATE INDEX userstrats2 on userstrats (userid, strat_hash)"
+    - "CREATE INDEX userstrats3 on userstrats (userid, strat_name, strat_version)"
