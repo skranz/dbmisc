@@ -6,6 +6,10 @@ Date: 2015-12-26
 Author: Sebastian Kranz
 Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>
 Description: Tools for working with databases in R
-License:GPL >= 2.0
+License: GPL >= 2.0
 LazyData: TRUE
-Imports: DBI, restorepoint
+Depends:
+    DBI,
+    restorepoint,
+    yaml
+RoxygenNote: 5.0.0

@@ -44,25 +44,38 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
   rs
 }
 
-#' Get row(s) from table
+#' Get rows from a table
 #'
-#' @param conn dbi database connection
-#' @param table name of the table
-#' @param params named list of values for key fields that identify the rows to be deleted
-#' @param sql optional a parameterized sql string
-#' @param run if FALSE only return parametrized SQL string
-dbGetRow = function(conn, table, params, sql=NULL, run = TRUE) {
-  restore.point("dbGetRow")
-  if (is.null(sql)) {
-    if (length(params)==0) {
-      where = ""
+#' @param .db dbi database connection
+#' @param .table name of the table
+#' @param .par named list of values for key fields that identify the rows to be deleted
+#' @param ... alternatively parameters can be provided directly as named arguments
+#' @param .sql optional a parameterized sql string
+#'        if you want to insert into the sql string
+#'        the value from a provided parameter mypar
+#'        write :mypar in the SQL string at the corresponding position.
+#'        Example:
+#'
+#'        select * from mytable where name = :myname
+#'
+#' @param .run if FALSE only return parametrized SQL string
+dbGet = function(.db, .table=NULL,..., .par=NULL, .sql=NULL, .run = TRUE) {
+  .par = c(.par,list(...))
+  restore.point("dbGet")
+  if (is.null(.sql)) {
+    if (tolower(substring(.table,1,7))=="select ") {
+      .sql = .table
     } else {
-      where = paste0(" where ", paste0(names(params)," = :",names(params), collapse= " AND "))
+      if (length(.par)==0) {
+        where = ""
+      } else {
+        where = paste0(" where ", paste0(names(.par)," = :",names(.par), collapse= " AND "))
+      }
+      .sql = paste0('select * from ', .table, where)
     }
-    sql = paste0('select * from ', table, where)
   }
-  if (!run) return(sql)
-  rs = dbSendQuery(conn, sql, params=params)
+  if (!.run) return(.sql)
+  rs = dbSendQuery(.db, .sql, params=.par)
   res = dbFetch(rs)
   if (NROW(res)==0) return(NULL)
   res
@@ -82,7 +95,8 @@ dbCreateSchemaTables = function(conn,schema=NULL, schema.yaml=NULL, schema.file=
   if (is.null(schema)) {
     if (is.null(schema.yaml))
       schema.yaml = readLines(schema.file,warn = FALSE)
-    schema = yaml.load_file(schema.yaml)
+    schema.yaml = paste0(schema.yaml, collapse = "\n")
+    schema = yaml.load(schema.yaml)
   }
 
   tables = names(schema)
