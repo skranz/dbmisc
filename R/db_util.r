@@ -7,9 +7,24 @@
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
 #' @param mode "insert" or "replace", should have no effect so far
-dbInsert = function(conn, table, vals,sql=NULL,run=TRUE, mode=c("insert","replace")[1]) {
+dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE) {
   restore.point("dbInsert")
   cols = names(vals)
+
+#   if (!is.null(primary.key)) {
+#     if (is.null(vals[[primary.key]] | isTRUE(is.na(vals[[primary.key]])))) {
+#       vals[[primary.key]] = sample.int(.Machine$integer.max,1)
+#     }
+#   }
+
+
+  if (isTRUE(convert)) {
+    names = names(vals)
+    vals = lapply(seq_along(vals), function(i) {
+      as(vals[[i]],rclass[i])
+    })
+    names(vals) = names
+  }
 
   if (is.null(sql)) {
     sql <- paste0(mode, " into ", table," values (",
@@ -17,7 +32,15 @@ dbInsert = function(conn, table, vals,sql=NULL,run=TRUE, mode=c("insert","replac
   }
   if (!run) return(sql)
   ret = dbSendQuery(conn, sql, params=vals)
-  invisible(ret)
+
+  if (!is.null(primary.key) & get.key) {
+    rs = dbSendQuery(conn, "select last_insert_rowid()")
+    pk = dbFetch(rs)
+    vals[[primary.key]] = pk[,1]
+  }
+
+
+  invisible(list(values=vals))
 }
 
 
@@ -127,14 +150,127 @@ dbCreateSchemaTables = function(conn,schema=NULL, schema.yaml=NULL, schema.file=
   invisible(schema)
 }
 
+#' Load and init database table schemas from yaml file
+#'
+#' @param file file name
+#' @param yaml yaml as text
+load.and.init.schemas = function(file=NULL, yaml=NULL) {
+  if (is.null(file)) {
+    schemas = yaml.load(paste0(yaml, collapse="\n"))
+  } else {
+    schemas = yaml.load_file(file)
+  }
+  names = names(schemas)
+  schemas = lapply(names, function(name) {
+    init.schema(schemas[[name]],name=name)
+  })
+  names(schemas) = names
+  schemas
+}
+
+#' Init a schema by parsing table definition and store info
+#' in easy accessibale R format
+#'
+#' Create rclasses of each column and primary keys
+#'
+#' @param schema the table schema as an R list
+#' @param name of the table
+init.schema = function(schema, name=NULL) {
+  schema$rclass = schema.r.classes(schema)
+  schema$name = name
+
+  cols = sapply(schema$table, tolower)
+  rows = grep("integer primary key", cols,fixed = TRUE)
+  if (length(rows)>0)
+    schema$primary_key = names(schema$table)[rows[1]]
+  schema
+}
+
+schema.r.classes = function(schema) {
+  str = tolower(substring(schema$table,1,3))
+
+  classes =c(
+    cha = "character",
+    tex = "character",
+    var = "character",
+    boo = "logical",
+    int = "integer",
+    num = "numeric",
+    rea = "numeric",
+    dat = "datetime"
+  )
+  res = classes[str]
+  names(res) = names(schema$table)
+  res
+}
+
+example.empty.row.schema = function() {
+  setwd("D:/libraries/dbmisc/dbmisc/inst/examples/dbschema")
+  schemas = yaml.load_file("strattourndb.yaml")
+  row = empty.row.from.schema(schemas$userstrats)
+  lapply(row, class)
+  list.to.schema.template(row)
+}
+
+schema.template = function(li, name="mytable", toClipboard=TRUE) {
+  templ = c(
+    "character" = "VARCHAR(255)",
+    "integer" = "INTEGER",
+    "numeric" = "NUMERIC",
+    "logical" = "BOOLEAN",
+    "POSIXct" = "DATETIME"
+  )
+
+  is.subli = sapply(li, function(el) is.list(el))
+
+  eli = li[!is.subli]
+  cols = lapply(eli, function(el) {
+    cl = class(el)[[1]]
+    if (cl %in% names(templ)) {
+      return(templ[cl])
+    }
+    return("UNKNOWN")
+  })
+  cols = paste0("    ",names(eli),": ", cols)
+  txt = paste0('
+',name,':
+  descr:
+  table:
+',paste0(cols,collapse='\n'),'
+  indexes:
+')
+
+  stxt = sapply(names(li)[is.subli], function(name) {
+    list.to.schema.template(li[[name]],name, toClipboard=FALSE)
+  })
+  txt = paste0(c(txt,stxt), collapse="\n")
+  if (toClipboard) {
+    writeClipboard(txt)
+  }
+  cat(txt)
+  invisible(txt)
+}
 
 #' Creates an example row from a database schema table
 #' using provided column values and default values specified in schema
 empty.row.from.schema = function(.schema, ..., .use.defaults = TRUE) {
   restore.point("schema.value.list")
 
+  empty = list(
+    "logical" = NA,
+    "numeric" = NA_real_,
+    "character" = '',
+    "integer" = NA_integer_,
+    "datetime" = NA_real_
+  )
+  if (is.null(.schema$rclass)) {
+    classes = schema.r.classes(.schema)
+  } else {
+    classes = .schema$rclass
+  }
+
+  vals = empty[classes]
   table = .schema$table
-  vals = replicate(length(table),NA, simplify=FALSE)
   names(vals) = names(table)
   if (.use.defaults & !is.null(.schema$defaults)) {
     vals[names(.schema$defaults)] = .schema$defaults
