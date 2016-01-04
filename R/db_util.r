@@ -11,18 +11,11 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
   restore.point("dbInsert")
   cols = names(vals)
 
-#   if (!is.null(primary.key)) {
-#     if (is.null(vals[[primary.key]] | isTRUE(is.na(vals[[primary.key]])))) {
-#       vals[[primary.key]] = sample.int(.Machine$integer.max,1)
-#     }
-#   }
-
-
   if (isTRUE(convert)) {
-    names = names(vals)
-    vals = lapply(seq_along(vals), function(i) {
-      as(vals[[i]],rclass[i])
-    })
+    names = names(rclass)
+    vals = suppressWarnings(lapply(names, function(name) {
+      as(vals[[name]],rclass[[name]])
+    }))
     names(vals) = names
   }
 
@@ -31,7 +24,13 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
       paste0(":",cols,collapse=", "),")")
   }
   if (!run) return(sql)
-  ret = dbSendQuery(conn, sql, params=vals)
+
+  if (length(vals[[1]])>1) {
+    vals = as.data.frame(vals,stringsAsFactors = FALSE)
+    dbWriteTable(conn, table, value=vals, append=TRUE)
+  } else {
+    ret = dbSendQuery(conn, sql, params=vals)
+  }
 
   if (!is.null(primary.key) & get.key) {
     rs = dbSendQuery(conn, "select last_insert_rowid()")
@@ -42,7 +41,6 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
 
   invisible(list(values=vals))
 }
-
 
 #' Delete row(s) from table
 #'
