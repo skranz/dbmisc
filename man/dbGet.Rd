@@ -4,7 +4,8 @@
 \alias{dbGet}
 \title{Get rows from a table}
 \usage{
-dbGet(.db, .table = NULL, ..., .par = NULL, .sql = NULL, .run = TRUE)
+dbGet(.db, .table = NULL, ..., .par = NULL, .sql = NULL, .run = TRUE,
+  .schema = NULL, .rclass = .schema$rclass, .convert = !is.null(.rclass))
 }
 \arguments{
 \item{.db}{dbi database connection}

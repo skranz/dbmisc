@@ -80,7 +80,7 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
 #'        select * from mytable where name = :myname
 #'
 #' @param .run if FALSE only return parametrized SQL string
-dbGet = function(.db, .table=NULL,..., .par=NULL, .sql=NULL, .run = TRUE) {
+dbGet = function(.db, .table=NULL,..., .par=NULL, .sql=NULL, .run = TRUE, .schema=NULL, .rclass=.schema$rclass, .convert = !is.null(.rclass)) {
   .par = c(.par,list(...))
   restore.point("dbGet")
   if (is.null(.sql)) {
@@ -99,6 +99,17 @@ dbGet = function(.db, .table=NULL,..., .par=NULL, .sql=NULL, .run = TRUE) {
   rs = dbSendQuery(.db, .sql, params=.par)
   res = dbFetch(rs)
   if (NROW(res)==0) return(NULL)
+
+  if (isTRUE(.convert)) {
+    names = names(.rclass)
+    res = suppressWarnings(lapply(names, function(name) {
+      as(res[[name]],.rclass[[name]])
+    }))
+    names(res) = names
+    res = as.data.frame(res,stringsAsFactors=FALSE)
+  }
+
+
   res
 }
 
@@ -184,6 +195,9 @@ init.schema = function(schema, name=NULL) {
   schema
 }
 
+#' Get a vector of R classes of the database columns described in a schema
+#'
+#' @param schema the schema
 schema.r.classes = function(schema) {
   str = tolower(substring(schema$table,1,3))
 
@@ -210,6 +224,14 @@ example.empty.row.schema = function() {
   list.to.schema.template(row)
 }
 
+#' Create an example schema from a list of R objects
+#'
+#' The output is shown per cat and copied to the clipboard.
+#' It can be used as a template for the .yaml schema file
+#'
+#' @param li The R list for which the schema shall be created
+#' @param name optional a name of the table
+#' @param toCliboard shall the created text be copied to the clipboard
 schema.template = function(li, name="mytable", toClipboard=TRUE) {
   templ = c(
     "character" = "VARCHAR(255)",
