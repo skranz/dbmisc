@@ -4,19 +4,18 @@
 \alias{dbGet}
 \title{Get rows from a table}
 \usage{
-dbGet(.db, .table = NULL, ..., .par = NULL, .sql = NULL, .run = TRUE,
-  .schema = NULL, .rclass = .schema$rclass, .convert = !is.null(.rclass))
+dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
+  schema = NULL, rclass = schema$rclass, convert = !is.null(rclass),
+  orderby = NULL)
 }
 \arguments{
-\item{.db}{dbi database connection}
+\item{db}{dbi database connection}
 
-\item{.table}{name of the table}
+\item{table}{name of the table}
 
-\item{...}{alternatively parameters can be provided directly as named arguments}
+\item{params}{named list of values for key fields that identify the rows to be deleted}
 
-\item{.par}{named list of values for key fields that identify the rows to be deleted}
-
-\item{.sql}{optional a parameterized sql string
+\item{sql}{optional a parameterized sql string
        if you want to insert into the sql string
        the value from a provided parameter mypar
        write :mypar in the SQL string at the corresponding position.
@@ -24,7 +23,15 @@ dbGet(.db, .table = NULL, ..., .par = NULL, .sql = NULL, .run = TRUE,
 
        select * from mytable where name = :myname}
 
-\item{.run}{if FALSE only return parametrized SQL string}
+\item{run}{if FALSE only return parametrized SQL string}
+
+\item{schema}{a table schema that can be used to convert values}
+
+\item{rclass}{the r class of the table columns, is extracted from schema}
+
+\item{convert}{if rclass is given shall results automatically be converted to these classes?}
+
+\item{orderby}{names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`}
 }
 \description{
 Get rows from a table

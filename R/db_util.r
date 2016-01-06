@@ -67,11 +67,10 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
 
 #' Get rows from a table
 #'
-#' @param .db dbi database connection
-#' @param .table name of the table
-#' @param .par named list of values for key fields that identify the rows to be deleted
-#' @param ... alternatively parameters can be provided directly as named arguments
-#' @param .sql optional a parameterized sql string
+#' @param db dbi database connection
+#' @param table name of the table
+#' @param params named list of values for key fields that identify the rows to be deleted
+#' @param sql optional a parameterized sql string
 #'        if you want to insert into the sql string
 #'        the value from a provided parameter mypar
 #'        write :mypar in the SQL string at the corresponding position.
@@ -79,31 +78,37 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
 #'
 #'        select * from mytable where name = :myname
 #'
-#' @param .run if FALSE only return parametrized SQL string
-dbGet = function(.db, .table=NULL,..., .par=NULL, .sql=NULL, .run = TRUE, .schema=NULL, .rclass=.schema$rclass, .convert = !is.null(.rclass)) {
-  .par = c(.par,list(...))
+#' @param run if FALSE only return parametrized SQL string
+#' @param schema a table schema that can be used to convert values
+#' @param rclass the r class of the table columns, is extracted from schema
+#' @param convert if rclass is given shall results automatically be converted to these classes?
+#' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL) {
   restore.point("dbGet")
-  if (is.null(.sql)) {
-    if (tolower(substring(.table,1,7))=="select ") {
-      .sql = .table
+  if (is.null(sql)) {
+    if (tolower(substring(table,1,7))=="select ") {
+      sql = table
     } else {
-      if (length(.par)==0) {
+      if (length(params)==0) {
         where = ""
       } else {
-        where = paste0(" where ", paste0(names(.par)," = :",names(.par), collapse= " AND "))
+        where = paste0(" where ", paste0(names(params)," = :",names(params), collapse= " AND "))
       }
-      .sql = paste0('select * from ', .table, where)
+      if (!is.null(orderby)) {
+        orderby = paste0(" order by ",paste0(orderby, collapse=", "))
+      }
+      sql = paste0('select * from ', table, where, orderby)
     }
   }
-  if (!.run) return(.sql)
-  rs = dbSendQuery(.db, .sql, params=.par)
+  if (!run) return(sql)
+  rs = dbSendQuery(db, sql, params=params)
   res = dbFetch(rs)
   if (NROW(res)==0) return(NULL)
 
-  if (isTRUE(.convert)) {
-    names = names(.rclass)
+  if (isTRUE(convert)) {
+    names = names(rclass)
     res = suppressWarnings(lapply(names, function(name) {
-      as(res[[name]],.rclass[[name]])
+      as(res[[name]],rclass[[name]])
     }))
     names(res) = names
     res = as.data.frame(res,stringsAsFactors=FALSE)
