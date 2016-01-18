@@ -5,7 +5,8 @@
 \title{Convert data from a database table to R format}
 \usage{
 convert.db.to.r(vals, rclass = schema$rclass, schema = NULL,
-  as.data.frame = is.data.frame(vals))
+  as.data.frame = is.data.frame(vals), null.as.na = TRUE,
+  origin = "1970-01-01")
 }
 \arguments{
 \item{vals}{the values loaded from the database table}
@@ -13,6 +14,10 @@ convert.db.to.r(vals, rclass = schema$rclass, schema = NULL,
 \item{rclass}{the r class of the table columns, is extracted from schema}
 
 \item{schema}{a table schema that can be used to convert values}
+
+\item{null.as.na}{shall NULL values be converted to NA values?}
+
+\item{origin}{the origin date for DATE and DATETIME conversion}
 }
 \description{
 Convert data from a database table to R format

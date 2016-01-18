@@ -5,7 +5,8 @@
 \title{Update a row in a database table}
 \usage{
 dbUpdate(conn, table, vals, where = NULL, schema = NULL, sql = NULL,
-  run = TRUE, rclass = schema$rclass, convert = !is.null(rclass))
+  run = TRUE, rclass = schema$rclass, convert = !is.null(rclass),
+  null.as.na = TRUE)
 }
 \arguments{
 \item{conn}{dbi database connection}
@@ -25,6 +26,8 @@ dbUpdate(conn, table, vals, where = NULL, schema = NULL, sql = NULL,
 \item{rclass}{the r class of the table columns, is extracted from schema}
 
 \item{convert}{if rclass is given shall results automatically be converted to these classes?}
+
+\item{null.as.na}{shall NULL values be converted to NA values?}
 }
 \description{
 Update a row in a database table

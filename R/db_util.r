@@ -19,18 +19,7 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
 
   # Update vals based on table schema
   if (isTRUE(convert)) {
-    names = names(rclass)
-    missing = setdiff(names, names(vals))
-    if (length(missing)>0) {
-      stop("Your values miss the columns ", paste0(missing, collapse=", "))
-    }
-
-    vals = suppressWarnings(lapply(names, function(name) {
-      val = vals[[name]]
-      if (is.null(val) & null.as.na) val = NA
-      res = as(val,rclass[[name]])
-    }))
-    names(vals) = names
+    vals = convert.r.to.db(vals=vals,rclass = rclass,schema = schema,null.as.na = null.as.na)
   }
   cols = names(vals)
 
@@ -147,6 +136,7 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
 
     # If DATE and DATETIME are stored as numeric, we need an origin for conversion
     if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+      if (is.na(val)) val = NA_real_
       if (rclass[[name]]=="Date") {
         as.Date(val,  origin = origin)
       } else {
@@ -162,6 +152,41 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
   res
 }
 
+#' Convert data from a database table to R format
+#'
+#' @param vals the values loaded from the database table
+#' @param schema a table schema that can be used to convert values
+#' @param rclass the r class of the table columns, is extracted from schema
+#' @param null.as.na shall NULL values be converted to NA values?
+#' @param origin the origin date for DATE and DATETIME conversion
+convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=TRUE, origin = "1970-01-01", add.missing=TRUE) {
+  restore.point("convert.r.to.db")
+
+  if (add.missing) {
+    names = names(rclass)
+  } else {
+    names = intersect(names(rclass),names(vals))
+  }
+  res = suppressWarnings(lapply(names, function(name) {
+    val = vals[[name]]
+    if (is.null(val) & null.as.na) val = NA
+
+    # If DATE and DATETIME are NA, we need an origin for conversion
+    if ( ((is.na(val)) | is.numeric(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+      if (rclass[[name]]=="Date") {
+        as.Date(val,  origin = origin)
+      } else {
+        as.POSIXct(val, origin = origin)
+      }
+    } else {
+      as(val,rclass[[name]])
+    }
+  }))
+  names(res) = names
+  res
+}
+
+
 
 #' Update a row in a database table
 #'
@@ -174,16 +199,15 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
 #' @param run if FALSE only return parametrized SQL string
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
-dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass)) {
+#' @param null.as.na shall NULL values be converted to NA values?
+dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE) {
   restore.point("dbUpdate")
 
   # Update vals based on table schema
   if (isTRUE(convert)) {
-    names = setdiff(names(rclass),names(vals))
-    vals = suppressWarnings(lapply(names, function(name) {
-      as(vals[[name]],rclass[[name]])
-    }))
-    names(vals) = names
+    vals = convert.r.to.db(vals,rclass = rclass,schema = schema,null.as.na = null.as.na, add.missing=FALSE)
+    where = convert.r.to.db(where,rclass = rclass,schema = schema,null.as.na = null.as.na, add.missing=FALSE)
+
   }
   cols = names(vals)
 

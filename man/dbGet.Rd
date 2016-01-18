@@ -32,6 +32,10 @@ dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
 \item{convert}{if rclass is given shall results automatically be converted to these classes?}
 
 \item{orderby}{names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`}
+
+\item{null.as.na}{shall NULL values be converted to NA values?}
+
+\item{origin}{the origin date for DATE and DATETIME conversion}
 }
 \description{
 Get rows from a table
