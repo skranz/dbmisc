@@ -1,23 +1,38 @@
 
-#' Insert row into table
+
+
+#' Insert row(s) into table
 #'
 #' @param conn dbi database connection
 #' @param table name of the table
 #' @param vals named list of values to be inserted
+#' @param schema a table schema that can be used to convert values
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
 #' @param mode "insert" or "replace", should have no effect so far
-dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE) {
+#' @param rclass the r class of the table columns, is extracted from schema
+#' @param convert if rclass is given shall results automatically be converted to these classes?
+#' @param primary.key name of the primary key column (if the table has one)
+#' @param get.key if TRUE return the created primary key value
+dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE) {
   restore.point("dbInsert")
-  cols = names(vals)
 
+  # Update vals based on table schema
   if (isTRUE(convert)) {
     names = names(rclass)
+    missing = setdiff(names, names(vals))
+    if (length(missing)>0) {
+      stop("Your values miss the columns ", paste0(missing, collapse=", "))
+    }
+
     vals = suppressWarnings(lapply(names, function(name) {
-      as(vals[[name]],rclass[[name]])
+      val = vals[[name]]
+      if (is.null(val) & null.as.na) val = NA
+      res = as(val,rclass[[name]])
     }))
     names(vals) = names
   }
+  cols = names(vals)
 
   if (is.null(sql)) {
     sql <- paste0(mode, " into ", table," values (",
@@ -83,7 +98,9 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL) {
+#' @param null.as.na shall NULL values be converted to NA values?
+#' @param origin the origin date for DATE and DATETIME conversion
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01") {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
@@ -106,17 +123,83 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, 
   if (NROW(res)==0) return(NULL)
 
   if (isTRUE(convert)) {
-    names = names(rclass)
-    res = suppressWarnings(lapply(names, function(name) {
-      as(res[[name]],rclass[[name]])
-    }))
-    names(res) = names
-    res = as.data.frame(res,stringsAsFactors=FALSE)
+    res = convert.db.to.r(res,rclass=rclass, schema=schema, null.as.na=null.as.na, origin=origin)
   }
-
 
   res
 }
+
+#' Convert data from a database table to R format
+#'
+#' @param vals the values loaded from the database table
+#' @param schema a table schema that can be used to convert values
+#' @param rclass the r class of the table columns, is extracted from schema
+#' @param null.as.na shall NULL values be converted to NA values?
+#' @param origin the origin date for DATE and DATETIME conversion
+convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.frame=is.data.frame(vals), null.as.na=TRUE, origin = "1970-01-01") {
+  restore.point("convert.db.to.r")
+
+
+  names = names(rclass)
+  res = suppressWarnings(lapply(names, function(name) {
+    val = vals[[name]]
+    if (is.null(val) & null.as.na) val = NA
+
+    # If DATE and DATETIME are stored as numeric, we need an origin for conversion
+    if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+      if (rclass[[name]]=="Date") {
+        as.Date(val,  origin = origin)
+      } else {
+        as.POSIXct(val, origin = origin)
+      }
+    } else {
+      as(val,rclass[[name]])
+    }
+  }))
+  names(res) = names
+  if (as.data.frame)
+    res = as.data.frame(res,stringsAsFactors=FALSE)
+  res
+}
+
+
+#' Update a row in a database table
+#'
+#' @param conn dbi database connection
+#' @param table name of the table
+#' @param vals named list of values to be inserted
+#' @param where named list that specifies the keys where to update
+#' @param schema a schema as R list, can be used to automatically convert types
+#' @param sql optional a parameterized sql string
+#' @param run if FALSE only return parametrized SQL string
+#' @param rclass the r class of the table columns, is extracted from schema
+#' @param convert if rclass is given shall results automatically be converted to these classes?
+dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass)) {
+  restore.point("dbUpdate")
+
+  # Update vals based on table schema
+  if (isTRUE(convert)) {
+    names = setdiff(names(rclass),names(vals))
+    vals = suppressWarnings(lapply(names, function(name) {
+      as(vals[[name]],rclass[[name]])
+    }))
+    names(vals) = names
+  }
+  cols = names(vals)
+
+  if (is.null(sql)) {
+    sql <- paste0("UPDATE ", table," SET ",
+      paste0(cols, " = :",cols,collapse=", "))
+    if (!is.null(where)) {
+      sql <- paste0(sql," WHERE ",
+        paste0(names(where), " = :",names(where),collapse=" AND "))
+    }
+  }
+  if (!run) return(sql)
+  ret = dbSendQuery(conn, sql, params=c(vals,where))
+  invisible(list(values=vals))
+}
+
 
 #' Create database tables and possible indices from a simple yaml schema
 #'
@@ -204,17 +287,18 @@ init.schema = function(schema, name=NULL) {
 #'
 #' @param schema the schema
 schema.r.classes = function(schema) {
-  str = tolower(substring(schema$table,1,3))
+  str = tolower(substring(schema$table,1,5))
 
   classes =c(
-    cha = "character",
-    tex = "character",
-    var = "character",
-    boo = "logical",
-    int = "integer",
-    num = "numeric",
-    rea = "numeric",
-    dat = "datetime"
+    chara = "character",
+    text = "character",
+    varch = "character",
+    boole = "logical",
+    integ = "integer",
+    numer = "numeric",
+    real = "numeric",
+    date = "Date",
+    datet = "POSIXct"
   )
   res = classes[str]
   names(res) = names(schema$table)

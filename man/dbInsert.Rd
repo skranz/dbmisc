@@ -2,12 +2,12 @@
 % Please edit documentation in R/db_util.r
 \name{dbInsert}
 \alias{dbInsert}
-\title{Insert row into table}
+\title{Insert row(s) into table}
 \usage{
 dbInsert(conn, table, vals, schema = NULL, sql = NULL, run = TRUE,
   mode = c("insert", "replace")[1], rclass = schema$rclass,
   convert = !is.null(rclass), primary.key = schema$primary_key,
-  get.key = FALSE)
+  get.key = FALSE, null.as.na = TRUE)
 }
 \arguments{
 \item{conn}{dbi database connection}
@@ -16,13 +16,23 @@ dbInsert(conn, table, vals, schema = NULL, sql = NULL, run = TRUE,
 
 \item{vals}{named list of values to be inserted}
 
+\item{schema}{a table schema that can be used to convert values}
+
 \item{sql}{optional a parameterized sql string}
 
 \item{run}{if FALSE only return parametrized SQL string}
 
 \item{mode}{"insert" or "replace", should have no effect so far}
+
+\item{rclass}{the r class of the table columns, is extracted from schema}
+
+\item{convert}{if rclass is given shall results automatically be converted to these classes?}
+
+\item{primary.key}{name of the primary key column (if the table has one)}
+
+\item{get.key}{if TRUE return the created primary key value}
 }
 \description{
-Insert row into table
+Insert row(s) into table
 }
 

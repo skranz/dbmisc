@@ -6,7 +6,7 @@
 \usage{
 dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
   schema = NULL, rclass = schema$rclass, convert = !is.null(rclass),
-  orderby = NULL)
+  orderby = NULL, null.as.na = TRUE, origin = "1970-01-01")
 }
 \arguments{
 \item{db}{dbi database connection}
