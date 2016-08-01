@@ -1,4 +1,29 @@
+.dbmisc.memoise.env = new.env()
 
+get.table.memoise = function(hash) {
+  .dbmisc.memoise.env[[hash]]
+}
+
+set.table.memoise = function(hash, data) {
+  .dbmisc.memoise.env[[hash]] = list(time=Sys.time(),data=data)
+}
+
+
+#' log a command that changes a database
+logDBcommand = function(type, sql="", user="NA", log.dir=NULL, table=NULL, do.log = TRUE) {
+  restore.point("logDBcommand")
+
+  if (!do.log | is.null(log.dir)) return()
+
+  if (!is.null(table)) {
+    log.file = paste0(log.dir,"/",table,".log")
+  } else {
+    log.file = paste0(log.dir,"/__sql__.log")
+  }
+  txt = paste0(list(as.character(Sys.time()), user, type,sql), collapse="|")
+
+  try(write(txt, file=log.file,append=TRUE))
+}
 
 
 #' Insert row(s) into table
@@ -14,7 +39,7 @@
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param primary.key name of the primary key column (if the table has one)
 #' @param get.key if TRUE return the created primary key value
-dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE) {
+dbInsert = function(conn, table=NULL, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbInsert")
 
   # Update vals based on table schema
@@ -42,6 +67,8 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
     vals[[primary.key]] = pk[,1]
   }
 
+  logDBcommand(user = user,type=mode,sql=sql,log.dir=log.dir, do.log=do.log,table = table)
+
 
   invisible(list(values=vals))
 }
@@ -53,7 +80,7 @@ dbInsert = function(conn, table, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("in
 #' @param params named list of values for key fields that identify the rows to be deleted
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
-dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
+dbDelete = function(conn, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbDelete")
   if (is.null(sql)) {
     if (length(params)==0) {
@@ -66,8 +93,33 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
   if (!run)
     return(sql)
   rs = dbSendQuery(conn, sql, params=params)
+
+  logDBcommand(user = user,type="mode",sql=sql,log.dir=log.dir, do.log=do.log,table = table)
   rs
 }
+
+
+dbGetMemoise = function(db, table,params=NULL, schema=NULL, log.dir=NULL, refetch.if.changed = !is.null(log.dir)) {
+  restore.point("dbGetMemoise")
+  library(digest)
+  hash = digest::digest(list(table, params))
+  res = get.table.memoise(hash)
+  use.memoise = !is.null(res)
+  if (use.memoise) {
+    if (refetch.if.changed) {
+      file = paste0(log.dir,"/",table,".log")
+      mtime = file.mtime(file)
+      use.memoise = res$time > mtime
+    }
+  }
+  if (use.memoise) return(res$data)
+
+  # fetch data and store result
+  data = dbGet(db=db, table=table,params=params, schema=schema)
+  set.table.memoise(hash = hash, data=data)
+  data
+}
+
 
 #' Get rows from a table
 #'
@@ -89,7 +141,7 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE) {
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01") {
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE) {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
@@ -134,17 +186,24 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
     val = vals[[name]]
     if (is.null(val) & null.as.na) val = NA
 
-    # If DATE and DATETIME are stored as numeric, we need an origin for conversion
-    if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
-      if (is.na(val)) val = NA_real_
-      if (rclass[[name]]=="Date") {
-        as.Date(val,  origin = origin)
+    new.val = try({
+      # If DATE and DATETIME are stored as numeric, we need an origin for conversion
+      if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+        if (is.na(val)) val = NA_real_
+        if (rclass[[name]]=="Date") {
+          as.Date(val,  origin = origin)
+        } else {
+          as.POSIXct(val, origin = origin)
+        }
       } else {
-        as.POSIXct(val, origin = origin)
+        as(val,rclass[[name]])
       }
-    } else {
-      as(val,rclass[[name]])
+    })
+    if (is(new.val,"try-error")) {
+      stop(paste0("Error when trying to convert variable ", name, " to ", rclass[[name]],":\n", as.character(new.val)))
     }
+    new.val
+
   }))
   names(res) = names
   if (as.data.frame)
@@ -171,16 +230,23 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
     val = vals[[name]]
     if (is.null(val) & null.as.na) val = NA
 
-    # If DATE and DATETIME are NA, we need an origin for conversion
-    if ( ((is.na(val)) | is.numeric(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
-      if (rclass[[name]]=="Date") {
-        as.Date(val,  origin = origin)
+    new.val = try({
+      # If DATE and DATETIME are NA, we need an origin for conversion
+      if ( ((is.na(val)) | is.numeric(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+        if (rclass[[name]]=="Date") {
+          as.Date(val,  origin = origin)
+        } else {
+          as.POSIXct(val, origin = origin)
+        }
       } else {
-        as.POSIXct(val, origin = origin)
+        as(val,rclass[[name]])
       }
-    } else {
-      as(val,rclass[[name]])
+    })
+
+    if (is(new.val,"try-error")) {
+      stop(paste0("Error when trying to convert variable ", name, " to ", rclass[[name]],":\n", as.character(new.val)))
     }
+    new.val
   }))
   names(res) = names
   res
@@ -200,7 +266,7 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param null.as.na shall NULL values be converted to NA values?
-dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE) {
+dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE,log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbUpdate")
 
   # Update vals based on table schema
@@ -221,6 +287,8 @@ dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE
   }
   if (!run) return(sql)
   ret = dbSendQuery(conn, sql, params=c(vals,where))
+  logDBcommand(user = user,type="update",sql=sql,log.dir=log.dir, do.log=do.log,table = table)
+
   invisible(list(values=vals))
 }
 
@@ -245,6 +313,7 @@ dbCreateSchemaTables = function(conn,schema=NULL, schema.yaml=NULL, schema.file=
 
   tables = names(schema)
   lapply(tables, function(table) {
+    restore.point("inner.dbCreateSchemaTables")
     s = schema[[table]]
     if (overwrite)
       try(dbRemoveTable(conn, table), silent=silent)
@@ -321,6 +390,7 @@ schema.r.classes = function(schema) {
     integ = "integer",
     numer = "numeric",
     real = "numeric",
+    doubl = "numeric",
     date = "Date",
     datet = "POSIXct"
   )
@@ -394,7 +464,8 @@ empty.row.from.schema = function(.schema, ..., .use.defaults = TRUE) {
     "numeric" = NA_real_,
     "character" = '',
     "integer" = NA_integer_,
-    "datetime" = NA_real_
+    "datetime" = as.POSIXct(NA),
+    "Date" = as.Date(NA)
   )
   if (is.null(.schema$rclass)) {
     classes = schema.r.classes(.schema)
