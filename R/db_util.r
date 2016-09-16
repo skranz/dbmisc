@@ -187,6 +187,14 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
     if (is.null(val) & null.as.na) val = NA
 
     new.val = try({
+      # logicals may be in a string like "1" or "TRUE"
+      if (rclass[[name]]=="logical") {
+        res = as.logical(val)
+        res[is.na(res)] = as.logical(as.numeric(val[is.na(res)]))
+        return(res)
+      }
+
+
       # If DATE and DATETIME are stored as numeric, we need an origin for conversion
       if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
         if (is.na(val)) val = NA_real_
