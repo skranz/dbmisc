@@ -4,7 +4,8 @@
 \alias{dbDelete}
 \title{Delete row(s) from table}
 \usage{
-dbDelete(conn, table, params, sql = NULL, run = TRUE)
+dbDelete(conn, table, params, sql = NULL, run = TRUE, log.dir = NULL,
+  do.log = !is.null(log.dir), user = NA)
 }
 \arguments{
 \item{conn}{dbi database connection}

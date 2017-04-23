@@ -5,8 +5,9 @@
 \title{Get rows from a table}
 \usage{
 dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
-  schema = NULL, rclass = schema$rclass, convert = !is.null(rclass),
-  orderby = NULL, null.as.na = TRUE, origin = "1970-01-01")
+  schema = schemas[[table]], schemas = get.db.schemas(db),
+  rclass = schema$rclass, convert = !is.null(rclass), orderby = NULL,
+  null.as.na = TRUE, origin = "1970-01-01", multiple = FALSE)
 }
 \arguments{
 \item{db}{dbi database connection}

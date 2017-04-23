@@ -1,5 +1,25 @@
 .dbmisc.memoise.env = new.env()
 
+set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
+  if (is.null(schemas) & !is.null(schema.file)) {
+    schemas = load.and.init.schemas(file=schema.file)
+  }
+
+  attr(db,"schemas") = schemas
+  invisible(db)
+}
+
+get.db.schemas = function(db, warn.null=TRUE) {
+  schemas = attr(db,"schemas")
+  if (is.null(schemas) & warn.null) {
+    attr(db,"no.schema.warning",TRUE)
+    if (!isTRUE(attr(db,"no.schema.warning"))) {
+      cat("\nno schemas set for db connection")
+    }
+  }
+  schemas
+}
+
 get.table.memoise = function(hash) {
   .dbmisc.memoise.env[[hash]]
 }
@@ -28,7 +48,7 @@ logDBcommand = function(type, sql="", user="NA", log.dir=NULL, table=NULL, do.lo
 
 #' Insert row(s) into table
 #'
-#' @param conn dbi database connection
+#' @param db dbi database connection
 #' @param table name of the table
 #' @param vals named list of values to be inserted
 #' @param schema a table schema that can be used to convert values
@@ -39,7 +59,7 @@ logDBcommand = function(type, sql="", user="NA", log.dir=NULL, table=NULL, do.lo
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param primary.key name of the primary key column (if the table has one)
 #' @param get.key if TRUE return the created primary key value
-dbInsert = function(conn, table=NULL, vals,schema=NULL, sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbInsert")
 
   # Update vals based on table schema
@@ -56,13 +76,13 @@ dbInsert = function(conn, table=NULL, vals,schema=NULL, sql=NULL,run=TRUE, mode=
 
   if (length(vals[[1]])>1) {
     vals = as.data.frame(vals,stringsAsFactors = FALSE)
-    dbWriteTable(conn, table, value=vals, append=TRUE)
+    dbWriteTable(db, table, value=vals, append=TRUE)
   } else {
-    ret = dbSendQuery(conn, sql, params=vals)
+    ret = dbSendQuery(db, sql, params=vals)
   }
 
   if (!is.null(primary.key) & get.key) {
-    rs = dbSendQuery(conn, "select last_insert_rowid()")
+    rs = dbSendQuery(db, "select last_insert_rowid()")
     pk = dbFetch(rs)
     vals[[primary.key]] = pk[,1]
   }
@@ -75,12 +95,12 @@ dbInsert = function(conn, table=NULL, vals,schema=NULL, sql=NULL,run=TRUE, mode=
 
 #' Delete row(s) from table
 #'
-#' @param conn dbi database connection
+#' @param db dbi database connection
 #' @param table name of the table
 #' @param params named list of values for key fields that identify the rows to be deleted
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
-dbDelete = function(conn, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbDelete")
   if (is.null(sql)) {
     if (length(params)==0) {
@@ -92,14 +112,14 @@ dbDelete = function(conn, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.
   }
   if (!run)
     return(sql)
-  rs = dbSendQuery(conn, sql, params=params)
+  rs = dbSendQuery(db, sql, params=params)
 
   logDBcommand(user = user,type="mode",sql=sql,log.dir=log.dir, do.log=do.log,table = table)
   rs
 }
 
 
-dbGetMemoise = function(db, table,params=NULL, schema=NULL, log.dir=NULL, refetch.if.changed = !is.null(log.dir)) {
+dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=TRUE) {
   restore.point("dbGetMemoise")
   library(digest)
   hash = digest::digest(list(table, params))
@@ -115,7 +135,7 @@ dbGetMemoise = function(db, table,params=NULL, schema=NULL, log.dir=NULL, refetc
   if (use.memoise) return(res$data)
 
   # fetch data and store result
-  data = dbGet(db=db, table=table,params=params, schema=schema)
+  data = dbGet(db=db, table=table,params=params, schema=schema,empty.as.null=empty.as.null)
   set.table.memoise(hash = hash, data=data)
   data
 }
@@ -141,7 +161,7 @@ dbGetMemoise = function(db, table,params=NULL, schema=NULL, log.dir=NULL, refetc
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE) {
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=schemas[[table]], schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE, empty.as.null=TRUE) {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
@@ -161,7 +181,7 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=NULL, 
   if (!run) return(sql)
   rs = dbSendQuery(db, sql, params=params)
   res = dbFetch(rs)
-  if (NROW(res)==0) return(NULL)
+  if (NROW(res)==0 & empty.as.null) return(NULL)
 
   if (isTRUE(convert)) {
     res = convert.db.to.r(res,rclass=rclass, schema=schema, null.as.na=null.as.na, origin=origin)
@@ -193,6 +213,12 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
         res[is.na(res)] = as.logical(as.numeric(val[is.na(res)]))
         return(res)
       }
+
+      # Blobs are converted via serialize and unserialize
+      #if (rclass[[name]]=="blob") {
+      #  res = unserialize(val)
+      #  return(res)
+      #}
 
 
       # If DATE and DATETIME are stored as numeric, we need an origin for conversion
@@ -239,6 +265,11 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
     if (is.null(val) & null.as.na) val = NA
 
     new.val = try({
+      # Blobs are converted via serialize and unserialize
+      #if (rclass[[name]]=="blob") {
+      #  return(I(serialize(val, connection=NULL)))
+      #}
+
       # If DATE and DATETIME are NA, we need an origin for conversion
       if ( ((is.na(val)) | is.numeric(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
         if (rclass[[name]]=="Date") {
@@ -264,7 +295,7 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
 
 #' Update a row in a database table
 #'
-#' @param conn dbi database connection
+#' @param db dbi database connection
 #' @param table name of the table
 #' @param vals named list of values to be inserted
 #' @param where named list that specifies the keys where to update
@@ -274,7 +305,7 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param null.as.na shall NULL values be converted to NA values?
-dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE,log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE,log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbUpdate")
 
   # Update vals based on table schema
@@ -294,7 +325,7 @@ dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE
     }
   }
   if (!run) return(sql)
-  ret = dbSendQuery(conn, sql, params=c(vals,where))
+  ret = dbSendQuery(db, sql, params=c(vals,where))
   logDBcommand(user = user,type="update",sql=sql,log.dir=log.dir, do.log=do.log,table = table)
 
   invisible(list(values=vals))
@@ -303,15 +334,16 @@ dbUpdate = function(conn, table, vals,where=NULL, schema=NULL, sql=NULL,run=TRUE
 
 #' Create database tables and possible indices from a simple yaml schema
 #'
-#' @param conn dbi database connection
-#' @param schema a schema as R list
+#' @param db dbi database connection
+#' @param schemas schemas as R list
 #' @param schema.yaml alternatively a schema as yaml text
 #' @param schema.file alternatively a file name of a schema yaml file
 #' @param overwrite shall existing tables be overwritten?
 #' @param silent if TRUE don't show messages
-dbCreateSchemaTables = function(conn,schema=NULL, schema.yaml=NULL, schema.file=NULL, overwrite=FALSE,silent=FALSE) {
+dbCreateSchemaTables = function(db,schemas=get.db.schemas(db), schema.yaml=NULL, schema.file=NULL, overwrite=FALSE,silent=FALSE) {
   restore.point("dbCreateSchemaTables")
 
+  schema = schemas
   if (is.null(schema)) {
     if (is.null(schema.yaml))
       schema.yaml = readLines(schema.file,warn = FALSE)
@@ -324,18 +356,18 @@ dbCreateSchemaTables = function(conn,schema=NULL, schema.yaml=NULL, schema.file=
     restore.point("inner.dbCreateSchemaTables")
     s = schema[[table]]
     if (overwrite)
-      try(dbRemoveTable(conn, table), silent=silent)
-    if (!dbExistsTable(conn, table)) {
+      try(dbRemoveTable(db, table), silent=silent)
+    if (!dbExistsTable(db, table)) {
       # create table
       sql = paste0("CREATE TABLE ", table,"(",
         paste0(names(s$table), " ", s$table, collapse=",\n"),
         ")"
       )
-      dbSendQuery(conn,sql)
+      dbSendQuery(db,sql)
 
       # create indexes
       for (index in s$indexes) {
-        err = try(dbSendQuery(conn,index), silent=TRUE)
+        err = try(dbSendQuery(db,index), silent=TRUE)
         if (is(err,"try-error")) {
           msg = as.character(err)
           msg = str.right.of(msg,"Error :")
@@ -401,6 +433,7 @@ schema.r.classes = function(schema) {
     doubl = "numeric",
     date = "Date",
     datet = "POSIXct"
+    #blob = "blob"
   )
   res = classes[str]
   names(res) = names(schema$table)

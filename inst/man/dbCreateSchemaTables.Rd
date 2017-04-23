@@ -4,13 +4,11 @@
 \alias{dbCreateSchemaTables}
 \title{Create database tables and possible indices from a simple yaml schema}
 \usage{
-dbCreateSchemaTables(conn, schema = NULL, schema.yaml = NULL,
-  schema.file = NULL, overwrite = FALSE, silent = FALSE)
+dbCreateSchemaTables(db, schemas, schema.yaml = NULL, schema.file = NULL,
+  overwrite = FALSE, silent = FALSE)
 }
 \arguments{
-\item{conn}{dbi database connection}
-
-\item{schema}{a schema as R list}
+\item{schemas}{schemas as R list}
 
 \item{schema.yaml}{alternatively a schema as yaml text}
 
@@ -19,6 +17,8 @@ dbCreateSchemaTables(conn, schema = NULL, schema.yaml = NULL,
 \item{overwrite}{shall existing tables be overwritten?}
 
 \item{silent}{if TRUE don't show messages}
+
+\item{conn}{dbi database connection}
 }
 \description{
 Create database tables and possible indices from a simple yaml schema

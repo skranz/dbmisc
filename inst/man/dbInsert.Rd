@@ -4,13 +4,15 @@
 \alias{dbInsert}
 \title{Insert row(s) into table}
 \usage{
-dbInsert(conn, table, vals, schema = NULL, sql = NULL, run = TRUE,
+dbInsert(db, table = NULL, vals, schema = schemas[[table]],
+  schemas = get.db.schemas(db), sql = NULL, run = TRUE,
   mode = c("insert", "replace")[1], rclass = schema$rclass,
   convert = !is.null(rclass), primary.key = schema$primary_key,
-  get.key = FALSE, null.as.na = TRUE)
+  get.key = FALSE, null.as.na = TRUE, log.dir = NULL,
+  do.log = !is.null(log.dir), user = NA)
 }
 \arguments{
-\item{conn}{dbi database connection}
+\item{db}{dbi database connection}
 
 \item{table}{name of the table}
 

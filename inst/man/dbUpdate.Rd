@@ -4,12 +4,13 @@
 \alias{dbUpdate}
 \title{Update a row in a database table}
 \usage{
-dbUpdate(conn, table, vals, where = NULL, schema = NULL, sql = NULL,
-  run = TRUE, rclass = schema$rclass, convert = !is.null(rclass),
-  null.as.na = TRUE)
+dbUpdate(db, table, vals, where = NULL, schema = schemas[[table]],
+  schemas = get.db.schemas(db), sql = NULL, run = TRUE,
+  rclass = schema$rclass, convert = !is.null(rclass), null.as.na = TRUE,
+  log.dir = NULL, do.log = !is.null(log.dir), user = NA)
 }
 \arguments{
-\item{conn}{dbi database connection}
+\item{db}{dbi database connection}
 
 \item{table}{name of the table}
 
