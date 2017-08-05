@@ -1,5 +1,30 @@
 .dbmisc.memoise.env = new.env()
 
+#' Create a new SQLite database from a schema file
+#'
+#' @param schema.file the dbmisc schema file in yaml format
+#' @param schema.dir the directory of the schema file (if schema.file does not contain a path)
+#' @param db.name the name of the database file
+#' @param db.dir the directory of the database file, by default the schema directory
+#' @export
+dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file), db.name=NULL, db.dir=schema.dir) {
+  restore.point("dbCreateSQLiteFromSchema")
+
+
+  schema.file = basename(schema.file)
+  schemas = load.and.init.schemas(file=file.path(schema.dir,schema.file))
+
+  if (is.null(db.name)) {
+    db.name = paste0(tools::file_path_sans_ext(schema.file),".sqlite")
+  }
+  library(RSQLite)
+  db = dbConnect(RSQLite::SQLite(),dbname=file.path(db.dir,db.name))
+  dbCreateSchemaTables(db,schemas = schemas)
+  dbDisconnect(db)
+  cat("\nGenerated",file.path(db.dir,db.name))
+  file.path(db.dir,db.name)
+}
+
 set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   if (is.null(schemas) & !is.null(schema.file)) {
     schemas = load.and.init.schemas(file=schema.file)

@@ -11,5 +11,6 @@ LazyData: TRUE
 Depends:
     DBI,
     restorepoint,
-    yaml
+    yaml,
+    stringtools
 RoxygenNote: 5.0.0
