@@ -470,7 +470,7 @@ example.empty.row.schema = function() {
   schemas = yaml.load_file("strattourndb.yaml")
   row = empty.row.from.schema(schemas$userstrats)
   lapply(row, class)
-  list.to.schema.template(row)
+  schema.template(row)
 }
 
 #' Create an example schema from a list of R objects
@@ -510,7 +510,7 @@ schema.template = function(li, name="mytable", toClipboard=TRUE) {
 ')
 
   stxt = sapply(names(li)[is.subli], function(name) {
-    list.to.schema.template(li[[name]],name, toClipboard=FALSE)
+    schema.template(li[[name]],name, toClipboard=FALSE)
   })
   txt = paste0(c(txt,stxt), collapse="\n")
   if (toClipboard) {
