@@ -144,7 +144,7 @@ dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.lo
 }
 
 
-dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=TRUE) {
+dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=FALSE) {
   restore.point("dbGetMemoise")
   library(digest)
   hash = digest::digest(list(table, params))
@@ -186,7 +186,7 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=schemas[[table]], schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE, empty.as.null=TRUE) {
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=schemas[[table]], schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE, empty.as.null=FALSE) {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
@@ -230,6 +230,13 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
   res = suppressWarnings(lapply(names, function(name) {
     val = vals[[name]]
     if (is.null(val) & null.as.na) val = NA
+    if (length(val)==0) {
+      if (rclass[[name]]=="POSIXct" | rclass[[name]]=="Date") {
+        class(val) = rclass[[name]]
+        return(val)
+      }
+      return(as(val,rclass[[name]]))
+    }
 
     new.val = try({
       # logicals may be in a string like "1" or "TRUE"
