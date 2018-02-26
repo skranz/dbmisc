@@ -1,30 +1,5 @@
 .dbmisc.memoise.env = new.env()
 
-#' Create a new SQLite database from a schema file
-#'
-#' @param schema.file the dbmisc schema file in yaml format
-#' @param schema.dir the directory of the schema file (if schema.file does not contain a path)
-#' @param db.name the name of the database file
-#' @param db.dir the directory of the database file, by default the schema directory
-#' @export
-dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file), db.name=NULL, db.dir=schema.dir) {
-  restore.point("dbCreateSQLiteFromSchema")
-
-
-  schema.file = basename(schema.file)
-  schemas = load.and.init.schemas(file=file.path(schema.dir,schema.file))
-
-  if (is.null(db.name)) {
-    db.name = paste0(tools::file_path_sans_ext(schema.file),".sqlite")
-  }
-  library(RSQLite)
-  db = dbConnect(RSQLite::SQLite(),dbname=file.path(db.dir,db.name))
-  dbCreateSchemaTables(db,schemas = schemas)
-  dbDisconnect(db)
-  cat("\nGenerated",file.path(db.dir,db.name))
-  file.path(db.dir,db.name)
-}
-
 set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   if (is.null(schemas) & !is.null(schema.file)) {
     schemas = load.and.init.schemas(file=schema.file)
@@ -86,6 +61,9 @@ logDBcommand = function(type, sql="", user="NA", log.dir=NULL, table=NULL, do.lo
 #' @param get.key if TRUE return the created primary key value
 dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbInsert")
+
+  # Nothing to insert
+  if (NROW(vals)==0) return()
 
   # Update vals based on table schema
   if (isTRUE(convert)) {
@@ -228,6 +206,7 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
 
   names = names(rclass)
   res = suppressWarnings(lapply(names, function(name) {
+    #restore.point("hsfhkdhfkd")
     val = vals[[name]]
     if (is.null(val) & null.as.na) val = NA
     if (length(val)==0) {
@@ -363,54 +342,6 @@ dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas
   invisible(list(values=vals))
 }
 
-
-#' Create database tables and possible indices from a simple yaml schema
-#'
-#' @param db dbi database connection
-#' @param schemas schemas as R list
-#' @param schema.yaml alternatively a schema as yaml text
-#' @param schema.file alternatively a file name of a schema yaml file
-#' @param overwrite shall existing tables be overwritten?
-#' @param silent if TRUE don't show messages
-dbCreateSchemaTables = function(db,schemas=get.db.schemas(db), schema.yaml=NULL, schema.file=NULL, overwrite=FALSE,silent=FALSE) {
-  restore.point("dbCreateSchemaTables")
-
-  schema = schemas
-  if (is.null(schema)) {
-    if (is.null(schema.yaml))
-      schema.yaml = readLines(schema.file,warn = FALSE)
-    schema.yaml = paste0(schema.yaml, collapse = "\n")
-    schema = yaml.load(schema.yaml)
-  }
-
-  tables = names(schema)
-  lapply(tables, function(table) {
-    restore.point("inner.dbCreateSchemaTables")
-    s = schema[[table]]
-    if (overwrite)
-      try(dbRemoveTable(db, table), silent=silent)
-    if (!dbExistsTable(db, table)) {
-      # create table
-      sql = paste0("CREATE TABLE ", table,"(",
-        paste0(names(s$table), " ", s$table, collapse=",\n"),
-        ")"
-      )
-      dbSendQuery(db,sql)
-
-      # create indexes
-      for (index in s$indexes) {
-        err = try(dbSendQuery(db,index), silent=TRUE)
-        if (is(err,"try-error")) {
-          msg = as.character(err)
-          msg = str.right.of(msg,"Error :")
-          msg = paste0("When running \n", index,"\n:\n",msg)
-          stop(msg)
-        }
-      }
-    }
-  })
-  invisible(schema)
-}
 
 #' Load and init database table schemas from yaml file
 #'
