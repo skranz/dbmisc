@@ -8,7 +8,7 @@ dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
   schema = schemas[[table]], schemas = get.db.schemas(db),
   rclass = schema$rclass, convert = !is.null(rclass), orderby = NULL,
   null.as.na = TRUE, origin = "1970-01-01", multiple = FALSE,
-  empty.as.null = TRUE)
+  empty.as.null = FALSE)
 }
 \arguments{
 \item{db}{dbi database connection}

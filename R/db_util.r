@@ -1,5 +1,6 @@
 .dbmisc.memoise.env = new.env()
 
+#' Set schemas as hidden attribute to a data base connection db
 set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   if (is.null(schemas) & !is.null(schema.file)) {
     schemas = load.and.init.schemas(file=schema.file)
@@ -9,6 +10,7 @@ set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   invisible(db)
 }
 
+#' Extract schemas from a data base connection
 get.db.schemas = function(db, warn.null=TRUE) {
   schemas = attr(db,"schemas")
   if (is.null(schemas) & warn.null) {
@@ -19,6 +21,7 @@ get.db.schemas = function(db, warn.null=TRUE) {
   }
   schemas
 }
+
 
 get.table.memoise = function(hash) {
   .dbmisc.memoise.env[[hash]]
@@ -121,7 +124,16 @@ dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.lo
   rs
 }
 
-
+#' Get results from a database like dbGet put buffer the results in memory
+#'
+#' If the function is called again with the same parameter check if the
+#' something was changed in the database inbetween by looking at the time
+#' stamp of the log file. If there were no changes restore the values from
+#' memory. If there were changes load data again from database.
+#'
+#' If refetch.if.changed = FALSE (default if no log.dir is provided), always
+#' use the data from memory.
+#'
 dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=FALSE) {
   restore.point("dbGetMemoise")
   library(digest)

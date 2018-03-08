@@ -1,10 +1,11 @@
 
-#' Create a new SQLite database from a schema file
+#' Create or update a SQLite database from a schema file
 #'
 #' @param schema.file the dbmisc schema file in yaml format
 #' @param schema.dir the directory of the schema file (if schema.file does not contain a path)
 #' @param db.name the name of the database file
 #' @param db.dir the directory of the database file, by default the schema directory
+#' @param update if TRUE (default) copy and update the existing data in the tables. If FALSE just generate empty tables
 #' @export
 dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file), db.name=NULL, db.dir=schema.dir, update=TRUE) {
   restore.point("dbCreateSQLiteFromSchema")
@@ -25,14 +26,14 @@ dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file)
 }
 
 
-#' Create database tables and possible indices from a simple yaml schema
+#' Create or update database tables and possible indices from a simple yaml schema
 #'
 #' @param db dbi database connection
 #' @param schemas schemas as R list
 #' @param schema.yaml alternatively a schema as yaml text
 #' @param schema.file alternatively a file name of a schema yaml file
 #' @param overwrite shall existing tables be overwritten?
-#' @param update shall old data be copied from existing tables?
+#' @param update if TRUE (default) copy old data from existing tables.
 #' @param silent if TRUE don't show messages
 dbCreateSchemaTables = function(db,schemas=get.db.schemas(db), schema.yaml=NULL, schema.file=NULL, overwrite=update,silent=FALSE, update=TRUE) {
   restore.point("dbCreateSchemaTables")
