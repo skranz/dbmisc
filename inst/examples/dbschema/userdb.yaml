@@ -1,0 +1,16 @@
+# An example schema of a simple database with 1 table called user
+
+user:
+  table:
+    userid: CHARACTER(20)
+    email: VARCHAR(100)
+    age: INTEGER
+    female: BOOLEAN
+    created: DATETIME
+    descr: TEXT
+  index:
+    - email
+    - [female, age]
+    - created
+  sql:
+    - "CREATE UNIQUE INDEX index_userid ON user (userid)"
