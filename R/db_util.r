@@ -1,7 +1,7 @@
 .dbmisc.memoise.env = new.env()
 
 #' Set schemas as hidden attribute to a data base connection db
-set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
+set.db.schema = set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   if (is.null(schemas) & !is.null(schema.file)) {
     schemas = load.and.init.schemas(file=schema.file)
   }
@@ -11,7 +11,7 @@ set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
 }
 
 #' Extract schemas from a data base connection
-get.db.schemas = function(db, warn.null=TRUE) {
+get.db.schema = get.db.schemas = function(db, warn.null=TRUE) {
   schemas = attr(db,"schemas")
   if (is.null(schemas) & warn.null) {
     attr(db,"no.schema.warning",TRUE)
@@ -434,10 +434,12 @@ example.empty.row.schema = function() {
 schema.template = function(li, name="mytable", toClipboard=TRUE) {
   templ = c(
     "character" = "VARCHAR(255)",
+    "factor" = "VARCHAR(255)",
     "integer" = "INTEGER",
     "numeric" = "NUMERIC",
     "logical" = "BOOLEAN",
-    "POSIXct" = "DATETIME"
+    "POSIXct" = "DATETIME",
+    "Date" = "DATE"
   )
 
   is.subli = sapply(li, function(el) is.list(el))
@@ -453,10 +455,10 @@ schema.template = function(li, name="mytable", toClipboard=TRUE) {
   cols = paste0("    ",names(eli),": ", cols)
   txt = paste0('
 ',name,':
-  descr:
   table:
 ',paste0(cols,collapse='\n'),'
-  indexes:
+  index:
+    - ',names(eli)[1],' # example index on first column
 ')
 
   stxt = sapply(names(li)[is.subli], function(name) {

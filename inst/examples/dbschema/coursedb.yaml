@@ -1,0 +1,40 @@
+# An example schema of a simple database with 3 tables
+# that might be use to store information about students
+# in online courses.
+
+
+student:
+  # Specify columns
+  # using SQLite data types
+  table:
+    email: VARCHAR(100)
+    name: TEXT
+    country: VARCHAR(100)
+    city: VARCHAR(100)
+    create_time: DATETIME
+  # Specify 3 indices
+  index:
+    - email
+    - [country, city]
+    - create_time
+
+course:
+  table:
+    courseid: INTEGER
+    title: TEXT
+    year: INTEGER
+  # Manual SQL that is run if a table is generated or updated
+  # here we specify a unique index
+  sql:
+    - "CREATE UNIQUE INDEX course1 on course (courseid)"
+  index:
+    - year
+
+
+coursestud:
+  table:
+    courseid: INTEGER
+    email: VARCHAR(100)
+  index:
+    - courseid
+    - email

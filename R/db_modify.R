@@ -84,7 +84,7 @@ dbCreateSchemaTable = function(db,table, schema=schemas[[table]], schemas=get.db
   dbSendQuery(db,sql)
 
   # create indexes specified as SQL
-  for (index in schema[["indexes"]]) {
+  for (index in c(schema[["indexes"]], schema[["sql"]])) {
     err = try(dbSendQuery(db,index), silent=TRUE)
     if (is(err,"try-error")) {
       msg = as.character(err)
