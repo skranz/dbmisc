@@ -1,8 +1,8 @@
 Package: dbmisc
 Type: Package
 Title: Tools for working with databases in R
-Version: 0.1
-Date: 2015-12-26
+Version: 0.2
+Date: 2018-12-03
 Author: Sebastian Kranz
 Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>
 Description: Tools for working with databases in R
@@ -12,5 +12,6 @@ Depends:
     DBI,
     restorepoint,
     yaml,
-    stringtools
+    stringtools,
+    glue
 RoxygenNote: 5.0.0

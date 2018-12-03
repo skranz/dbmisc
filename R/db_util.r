@@ -106,19 +106,23 @@ dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db
 #' @param params named list of values for key fields that identify the rows to be deleted
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
-dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA, where.in=FALSE) {
   restore.point("dbDelete")
   if (is.null(sql)) {
     if (length(params)==0) {
       where = ""
     } else {
-      where = paste0(" where ", paste0(names(params)," = :",names(params), collapse= " AND "))
+      where = sql.where.code(db, params, where.in=where.in)
     }
     sql = paste0('delete from ', table, where)
   }
   if (!run)
     return(sql)
-  rs = dbSendQuery(db, sql, params=params)
+  if (length(params)>0) {
+    rs = dbSendQuery(db, sql, params=params)
+  } else {
+    rs = dbSendQuery(db, sql)
+  }
 
   logDBcommand(user = user,type="mode",sql=sql,log.dir=log.dir, do.log=do.log,table = table)
   rs
@@ -176,17 +180,13 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=schemas[[table]], schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", multiple=FALSE, empty.as.null=FALSE) {
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!is.null(table)) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, empty.as.null=FALSE) {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
       sql = table
     } else {
-      if (length(params)==0) {
-        where = ""
-      } else {
-        where = paste0(" where ", paste0(names(params)," = :",names(params), collapse= " AND "))
-      }
+      where = sql.where.code(db, params, where.in=where.in)
       if (!is.null(orderby)) {
         orderby = paste0(" order by ",paste0(orderby, collapse=", "))
       }
@@ -194,7 +194,11 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema=schema
     }
   }
   if (!run) return(sql)
-  rs = dbSendQuery(db, sql, params=params)
+  if (!where.in) {
+    rs = dbSendQuery(db, sql, params=params)
+  } else {
+    rs = dbSendQuery(db, sql)
+  }
   res = dbFetch(rs)
   if (NROW(res)==0 & empty.as.null) return(NULL)
 
@@ -328,13 +332,14 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param null.as.na shall NULL values be converted to NA values?
-dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE,log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE,  rclass=schema$rclass, convert=!is.null(rclass), null.as.na=TRUE,log.dir=NULL, do.log=!is.null(log.dir), user=NA, where.in=FALSE) {
   restore.point("dbUpdate")
 
   # Update vals based on table schema
   if (isTRUE(convert)) {
     vals = convert.r.to.db(vals,rclass = rclass,schema = schema,null.as.na = null.as.na, add.missing=FALSE)
-    where = convert.r.to.db(where,rclass = rclass,schema = schema,null.as.na = null.as.na, add.missing=FALSE)
+    if (!is.null(where))
+      where = convert.r.to.db(where,rclass = rclass,schema = schema,null.as.na = null.as.na, add.missing=FALSE)
 
   }
   cols = names(vals)
@@ -343,8 +348,8 @@ dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas
     sql <- paste0("UPDATE ", table," SET ",
       paste0(cols, " = :",cols,collapse=", "))
     if (!is.null(where)) {
-      sql <- paste0(sql," WHERE ",
-        paste0(names(where), " = :",names(where),collapse=" AND "))
+      where.sql = sql.where.code(db, where, where.in=where.in)
+      sql <- paste0(sql," ",where.sql)
     }
   }
   if (!run) return(sql)
@@ -359,12 +364,8 @@ dbUpdate = function(db, table, vals,where=NULL, schema=schemas[[table]], schemas
 #'
 #' @param file file name
 #' @param yaml yaml as text
-load.and.init.schemas = function(file=NULL, yaml=NULL) {
-  if (is.null(file)) {
-    schemas = yaml.load(paste0(yaml, collapse="\n"))
-  } else {
-    schemas = yaml.load_file(file)
-  }
+load.and.init.schemas = function(file=NULL, yaml= readLines(file,warn = FALSE)) {
+  schemas = yaml.load(paste0(yaml, collapse="\n"))
   names = names(schemas)
   schemas = lapply(names, function(name) {
     init.schema(schemas[[name]],name=name)
@@ -511,4 +512,23 @@ empty.df.from.schema = function(.schema,.nrows=1, ..., .use.defaults = TRUE) {
 
   df = as.data.frame(lapply(li, function(col) rep(col,length.out = .nrows)))
   df
+}
+
+sql.where.code = function(db=NULL,params, where.in=FALSE, parametrized=!where.in, add.where=TRUE) {
+  restore.point("sql.where.code")
+  if (length(params)==0) return("")
+  start = if (add.where) " WHERE " else (" ")
+  if (parametrized & where.in)
+    stop("Cannot combine parametrized queries with where.in")
+  if (parametrized) {
+    return(paste0(start, paste0(names(params)," = :",names(params), collapse= " AND ")))
+  } else if (!parametrized & !where.in) {
+    code = paste0(start, paste0(names(params)," = ({",names(params),"})", collapse= " AND "))
+    sql = glue_sql(code,.con=db,.envir=params)
+    return(sql)
+  } else if (where.in) {
+    code = paste0(start, paste0(names(params)," IN ({",names(params),"*})", collapse= " AND "))
+    sql = glue_sql(code,.con=db,.envir=params)
+    return(sql)
+  }
 }
