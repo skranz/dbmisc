@@ -180,7 +180,7 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!is.null(table)) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, empty.as.null=FALSE) {
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!is.null(table)) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, empty.as.null=FALSE, n=-1) {
   restore.point("dbGet")
   if (is.null(sql)) {
     if (tolower(substring(table,1,7))=="select ") {
@@ -199,7 +199,8 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!i
   } else {
     rs = dbSendQuery(db, sql)
   }
-  res = dbFetch(rs)
+  res = dbFetch(rs,n=n)
+  dbClearResult(rs)
   if (NROW(res)==0 & empty.as.null) return(NULL)
 
   if (isTRUE(convert)) {
