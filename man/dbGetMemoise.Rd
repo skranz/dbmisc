@@ -18,4 +18,3 @@ memory. If there were changes load data again from database.
 If refetch.if.changed = FALSE (default if no log.dir is provided), always
 use the data from memory.
 }
-

@@ -17,4 +17,3 @@ schema.template(li, name = "mytable", toClipboard = TRUE)
 The output is shown per cat and copied to the clipboard.
 It can be used as a template for the .yaml schema file
 }
-

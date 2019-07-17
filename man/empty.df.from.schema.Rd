@@ -11,4 +11,3 @@ empty.df.from.schema(.schema, .nrows = 1, ..., .use.defaults = TRUE)
 Creates an example data frame from a database schema table
 using provided column values and default values specified in schema
 }
-

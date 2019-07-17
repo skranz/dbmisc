@@ -11,4 +11,3 @@ empty.row.from.schema(.schema, ..., .use.defaults = TRUE)
 Creates an example row from a database schema table
 using provided column values and default values specified in schema
 }
-

@@ -15,4 +15,3 @@ init.schema(schema, name = NULL)
 \description{
 Create rclasses of each column and primary keys
 }
-

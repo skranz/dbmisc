@@ -14,4 +14,4 @@ Depends:
     yaml,
     stringtools,
     glue
-RoxygenNote: 5.0.0
+RoxygenNote: 6.0.1

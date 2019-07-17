@@ -5,10 +5,11 @@
 \title{Get rows from a table}
 \usage{
 dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
-  schema = schemas[[table]], schemas = get.db.schemas(db),
-  rclass = schema$rclass, convert = !is.null(rclass), orderby = NULL,
-  null.as.na = TRUE, origin = "1970-01-01", multiple = FALSE,
-  empty.as.null = FALSE)
+  schema = if (!is.null(table)) schemas[[table]] else NULL,
+  schemas = get.db.schemas(db), rclass = schema$rclass,
+  convert = !is.null(rclass), orderby = NULL, null.as.na = TRUE,
+  origin = "1970-01-01", where.in = FALSE, empty.as.null = FALSE,
+  n = -1)
 }
 \arguments{
 \item{db}{dbi database connection}
@@ -42,4 +43,3 @@ dbGet(db, table = NULL, params = NULL, sql = NULL, run = TRUE,
 \description{
 Get rows from a table
 }
-

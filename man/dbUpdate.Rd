@@ -7,7 +7,8 @@
 dbUpdate(db, table, vals, where = NULL, schema = schemas[[table]],
   schemas = get.db.schemas(db), sql = NULL, run = TRUE,
   rclass = schema$rclass, convert = !is.null(rclass), null.as.na = TRUE,
-  log.dir = NULL, do.log = !is.null(log.dir), user = NA)
+  log.dir = NULL, do.log = !is.null(log.dir), user = NA,
+  where.in = FALSE)
 }
 \arguments{
 \item{db}{dbi database connection}
@@ -33,4 +34,3 @@ dbUpdate(db, table, vals, where = NULL, schema = schemas[[table]],
 \description{
 Update a row in a database table
 }
-

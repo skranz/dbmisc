@@ -21,4 +21,3 @@ convert.r.to.db(vals, rclass = schema$rclass, schema = NULL,
 \description{
 Convert data from a database table to R format
 }
-

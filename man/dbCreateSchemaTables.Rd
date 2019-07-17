@@ -25,4 +25,3 @@ dbCreateSchemaTables(db, schemas = get.db.schemas(db), schema.yaml = NULL,
 \description{
 Create or update database tables and possible indices from a simple yaml schema
 }
-

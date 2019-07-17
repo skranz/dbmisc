@@ -37,4 +37,3 @@ dbInsert(db, table = NULL, vals, schema = schemas[[table]],
 \description{
 Insert row(s) into table
 }
-

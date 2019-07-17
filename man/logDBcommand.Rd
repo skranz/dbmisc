@@ -10,4 +10,3 @@ logDBcommand(type, sql = "", user = "NA", log.dir = NULL, table = NULL,
 \description{
 log a command that changes a database
 }
-

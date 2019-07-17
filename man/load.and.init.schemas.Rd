@@ -4,7 +4,7 @@
 \alias{load.and.init.schemas}
 \title{Load and init database table schemas from yaml file}
 \usage{
-load.and.init.schemas(file = NULL, yaml = NULL)
+load.and.init.schemas(file = NULL, yaml = readLines(file, warn = FALSE))
 }
 \arguments{
 \item{file}{file name}
@@ -14,4 +14,3 @@ load.and.init.schemas(file = NULL, yaml = NULL)
 \description{
 Load and init database table schemas from yaml file
 }
-

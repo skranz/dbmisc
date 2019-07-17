@@ -12,4 +12,3 @@ schema.r.classes(schema)
 \description{
 Get a vector of R classes of the database columns described in a schema
 }
-

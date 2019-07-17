@@ -21,4 +21,3 @@ dbCreateSQLiteFromSchema(schema.file, schema.dir = dirname(schema.file),
 \description{
 Create or update a SQLite database from a schema file
 }
-

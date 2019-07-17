@@ -26,4 +26,3 @@ dbCreateSchemaTable(db, table, schema = schemas[[table]],
 \description{
 Create database table and possible indices from a simple yaml schema
 }
-

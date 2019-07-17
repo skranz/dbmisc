@@ -1,5 +1,13 @@
 .dbmisc.memoise.env = new.env()
 
+#' Connect to an SQLite db and set
+#' a schema
+dbConnectSQLiteWithSchema = function(dbname, schema.file=paste0(tools::file_path_sans_ext(dbname),".yaml"), schema=load.and.init.schemas(schema.file)) {
+  db = dbConnect(RSQLite::SQLite(),dbname)
+  db = set.db.schemas(db, schema)
+  db
+}
+
 #' Set schemas as hidden attribute to a data base connection db
 set.db.schema = set.db.schemas = function(db, schemas=NULL, schema.file=NULL) {
   if (is.null(schemas) & !is.null(schema.file)) {
