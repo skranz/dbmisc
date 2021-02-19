@@ -1,4 +1,3 @@
-
 #' Create or update a SQLite database from a schema file
 #'
 #' @param schema.file the dbmisc schema file in yaml format
@@ -47,7 +46,7 @@ dbCreateSchemaTables = function(db,schemas=get.db.schemas(db), schema.yaml=NULL,
 
   tables = names(schemas)
   lapply(tables, function(table) {
-    dbCreateSchemaTable(db, table, schemas=schemas, overwrite=overwrite, silent=silent)
+    dbCreateSchemaTable(db, table, schemas=schemas, overwrite=overwrite, silent=silent,update=update)
   })
   invisible(schemas)
 }
