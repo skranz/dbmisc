@@ -92,7 +92,24 @@ dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db
     vals = as.data.frame(vals,stringsAsFactors = FALSE)
     dbWriteTable(db, table, value=vals, append=TRUE)
   } else {
-    ret = dbSendQuery(db, sql, params=vals)
+    #ret = dbSendQuery(db, sql, params=vals)
+    ret = try(dbSendQuery(db, sql, params=vals))
+    if (is(ret, "try-error")) {
+      msg = as.character(ret)
+      if (has.substr(msg,"were supplied")) {
+        db.cols = dbTableCols(db, table)$name
+        missing = setdiff(db.cols,names(vals))
+        if (length(missing)==0) {
+          msg = paste0(msg, "\nCompared to your database the following columns are missing in your provided data set: ", paste0(missing, collapse=", "))
+          if (!is.null(schema$table)) {
+            msg = paste0(msg, "\nPossibly your DB is not updated according to the current schema. Make sure to restart R and then call dbmisc::dbCreateSQLiteFromSchema(update=TRUE, ...).")
+          }
+        }
+      }
+      stop(msg)
+    }
+
+
   }
 
   if (!is.null(primary.key) & get.key) {
@@ -541,3 +558,15 @@ sql.where.code = function(db=NULL,params, where.in=FALSE, parametrized=!where.in
     return(sql)
   }
 }
+
+#' Get a data frame with column information for a database table
+#'
+#' @param db dbi database connection
+#' @param table name of the table
+dbTableCols = function(db, table) {
+  sql = paste0("PRAGMA table_info(",table,");")
+  #sql = paste0("SELECT sql FROM sqlite_master WHERE tbl_name = '", table,"' AND type = 'table'")
+  rs = dbSendQuery(db, sql)
+  dbFetch(rs)
+}
+

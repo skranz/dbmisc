@@ -4,7 +4,7 @@
 #' @param schema.dir the directory of the schema file (if schema.file does not contain a path)
 #' @param db.name the name of the database file
 #' @param db.dir the directory of the database file, by default the schema directory
-#' @param update if TRUE (default) copy and update the existing data in the tables. If FALSE just generate empty tables
+#' @param update if TRUE copy and update the existing data in the tables. If FALSE just generate empty tables.
 #' @export
 dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file), db.name=NULL, db.dir=schema.dir, update=TRUE) {
   restore.point("dbCreateSQLiteFromSchema")
@@ -16,11 +16,21 @@ dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file)
   if (is.null(db.name)) {
     db.name = paste0(tools::file_path_sans_ext(schema.file),".sqlite")
   }
+  db.file = file.path(db.dir,db.name)
+  did.exist = file.exists(db.file)
+  if (!did.exist) {
+    update = FALSE
+  }
+
   library(RSQLite)
-  db = dbConnect(RSQLite::SQLite(),dbname=file.path(db.dir,db.name))
+  db = dbConnect(RSQLite::SQLite(),dbname=db.file)
   dbCreateSchemaTables(db,schemas = schemas, update=update)
   dbDisconnect(db)
-  cat("\nGenerated",file.path(db.dir,db.name))
+  if (did.exist) {
+    cat("\nModified the existing data base ",db.file)
+  } else {
+    cat("\nGenerated the new data base ",db.file)
+  }
   file.path(db.dir,db.name)
 }
 
