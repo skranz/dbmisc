@@ -163,7 +163,7 @@ dbDelete = function(db, table, params, sql=NULL, run = TRUE, log.dir=NULL, do.lo
 #' If refetch.if.changed = FALSE (default if no log.dir is provided), always
 #' use the data from memory.
 #'
-dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=FALSE) {
+dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=get.db.schemas(db), log.dir=NULL, refetch.if.changed = !is.null(log.dir), empty.as.null=FALSE,...) {
   restore.point("dbGetMemoise")
   library(digest)
   hash = digest::digest(list(table, params))
@@ -179,7 +179,7 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
   if (use.memoise) return(res$data)
 
   # fetch data and store result
-  data = dbGet(db=db, table=table,params=params, schema=schema,empty.as.null=empty.as.null)
+  data = dbGet(db=db, table=table,params=params, schema=schema,empty.as.null=empty.as.null,...)
   set.table.memoise(hash = hash, data=data)
   data
 }
@@ -188,34 +188,69 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
 #' Get rows from a table
 #'
 #' @param db dbi database connection
-#' @param table name of the table
-#' @param params named list of values for key fields that identify the rows to be deleted
-#' @param sql optional a parameterized sql string
-#'        if you want to insert into the sql string
-#'        the value from a provided parameter mypar
-#'        write :mypar in the SQL string at the corresponding position.
-#'        Example:
+#' @param table name of the table. If you specify more than one table the later tables will be joined. You then should specify the \code{joinby} argument and possible the \code{fields} argument if you want to select fields also from the later tables.
+#' @param params named list of values for key fields. If you don't use a custom SQL statement the list will be used to construct a WHERE clause. E.g. `params = list(age=30,gender="male")` would be translated to the WHERE clause `WHERE age = 30 AND gender="male"`. If you want to match several values, e.g. `params = list(age = c(30,40))` you need to set the argument `where.in = TRUE` to construct a correct WHERE clause.
+#' @param sql optional a parameterized custom sql string
+#'   Can contain parameters passed with the `param` arguments.
+#'   E.g. if you have `param = list(myname="Seb")` you could use `myname` an example SQL statement using  as follows:
 #'
-#'        select * from mytable where name = :myname
+#'    select * from mytable where name = :myname
 #'
+#'   To avoid SQL injection you should provide all values that
+#'   can be provided by a user as such parameters or
+#'   make sure that you escape them.
+#' @param fields If not NULL can be used to specify fields that shall be selected as character. For joined tables, you must enter fields in the format "tablename.field". E.g. `fields = "*, table2.myfield` would select all columns from the first table and the column `myfield` from the joined 2nd table.
+#' @param joinby If you specify more than one table the later tables shall be joined by the variables specified in `joinby` with the first table. For more complicated joins where the names of the join variables differ you have to write custom SQL with the `sql` argument instead.
+#' @param jointype The type of the join if you specify a `joinby` argument. Default is "inner" but can also be set to "left" or "right"
 #' @param run if FALSE only return parametrized SQL string
 #' @param schema a table schema that can be used to convert values
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
+#' @param where.in Set TRUE if your params contain sets and therefore a WHERE IN clause shall be generated.
+#' @param where.sql An optional SQL code just for the WHERE clause. Can be used if some parameters will be checked with inequality.
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
-dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!is.null(table)) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, empty.as.null=FALSE, n=-1) {
+#' @param empty.as.null if TRUE return just NULL if the query returns zero rows.
+#' @param n The maximum number of rows that shall be fetched. If `n=-1` (DEFAULT) fetch all rows.
+dbGet = function(db, table=NULL,params=NULL, sql=NULL, fields=NULL, joinby = NULL, jointype=c("inner","left","right")[1], run = TRUE, schema= if(length(table)==1) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), convert.param=FALSE, orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, where.sql = NULL, empty.as.null=FALSE, n=-1) {
+
+
   restore.point("dbGet")
+
+  # We may use schemas from multiple tables in complex
+  # sql statements
+  if (is.null(schema) & length(table)>1 & !is.null(schemas)) {
+    schema = list(rclass = unlist(lapply(schemas[table], function(s) s$rclass)))
+    names(schema$rclass) = str.right.of(names(schema$rclass),".")
+    dupl = duplicated(names(schema$rclass))
+    schema$rclass = rclass = schema$rclass[!dupl]
+    convert = TRUE
+  }
+
   if (is.null(sql)) {
-    if (tolower(substring(table,1,7))=="select ") {
+    if (length(table)==1 & tolower(substring(table[1],1,7))=="select ") {
       sql = table
     } else {
-      where = sql.where.code(db, params, where.in=where.in)
+      if (is.null(where.sql))
+        where.sql = sql.where.code(db, params, where.in=where.in)
       if (!is.null(orderby)) {
         orderby = paste0(" order by ",paste0(orderby, collapse=", "))
       }
-      sql = paste0('select * from ', table, where, orderby)
+      if (!is.null(fields)) {
+        fields = paste0(fields, collapse=", ")
+      } else {
+        fields = "*"
+      }
+      if (length(table) > 1) {
+        if (is.null(joinby))
+          stop("If you specify more than one table, you either have to supply a custom SQL statement or specify explicit joinby arguments (and possibly fields).")
+        join = paste0(" ",toupper(jointype), " JOIN ", table[-1], " USING(", paste0(joinby, collapse=", "),")", collapse="\n")
+      } else {
+        join = ""
+      }
+
+      sql = paste0('SELECT ', fields,' FROM ', table[1],join, where.sql, orderby)
     }
   }
   if (!run) return(sql)
@@ -244,7 +279,6 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, run = TRUE, schema= if(!i
 #' @param origin the origin date for DATE and DATETIME conversion
 convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.frame=is.data.frame(vals), null.as.na=TRUE, origin = "1970-01-01") {
   restore.point("convert.db.to.r")
-
 
   names = names(rclass)
   res = suppressWarnings(lapply(names, function(name) {
@@ -293,9 +327,13 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
 
   }))
   names(res) = names
-  if (as.data.frame)
-    res = as.data.frame(res,stringsAsFactors=FALSE)
-  res
+  if (as.data.frame) {
+    vals = as.data.frame(vals)
+    vals[,names(res)] = as.data.frame(res,stringsAsFactors=FALSE)
+  } else {
+    vals[names(res)] = res
+  }
+  vals
 }
 
 #' Convert data from a database table to R format
@@ -344,6 +382,17 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
   res
 }
 
+#' Convert an R object to a datetime object that can be used
+#' in a WHERE clause.
+to.db.datetime = function(val, origin = "1970-01-01") {
+  as.numeric(as.POSIXct(val, origin = origin))
+}
+
+#' Convert an R object to a date object that can be used
+#' in a WHERE clause.
+tp.db.date = function(val, origin = "1970-01-01") {
+  as.numeric(as.Date(val, origin = origin))
+}
 
 
 #' Update a row in a database table
@@ -540,6 +589,14 @@ empty.df.from.schema = function(.schema,.nrows=1, ..., .use.defaults = TRUE) {
   df
 }
 
+#' Create a parametrized or escaped SQL WHERE clause from
+#' the provided parameters.
+#'
+#' @param db a database connection needed for correct escaping via glue_sql
+#' @param params a list of parameters assume that db fields have the same name and have to be equal to provided values.
+#' @param where.in Set true TRUE a member of params can be vector and return all rows that match an element. By default FALSE to generate more compact code.
+#' @param paramertrized shall the generated code use SQL parameters.
+#' @param add.where If TRUE start with WHERE
 sql.where.code = function(db=NULL,params, where.in=FALSE, parametrized=!where.in, add.where=TRUE) {
   restore.point("sql.where.code")
   if (length(params)==0) return("")
@@ -558,6 +615,8 @@ sql.where.code = function(db=NULL,params, where.in=FALSE, parametrized=!where.in
     return(sql)
   }
 }
+
+
 
 #' Get a data frame with column information for a database table
 #'
