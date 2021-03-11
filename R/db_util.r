@@ -189,30 +189,30 @@ dbGetMemoise = function(db, table,params=NULL,schema=schemas[[table]], schemas=g
 #'
 #' @param db dbi database connection
 #' @param table name of the table. If you specify more than one table the later tables will be joined. You then should specify the \code{joinby} argument and possible the \code{fields} argument if you want to select fields also from the later tables.
-#' @param params named list of values for key fields. If you don't use a custom SQL statement the list will be used to construct a WHERE clause. E.g. `params = list(age=30,gender="male")` would be translated to the WHERE clause `WHERE age = 30 AND gender="male"`. If you want to match several values, e.g. `params = list(age = c(30,40))` you need to set the argument `where.in = TRUE` to construct a correct WHERE clause.
+#' @param params named list of values for key fields. If you don't use a custom SQL statement the list will be used to construct a WHERE clause. E.g. \code{params = list(age=30,gender="male")} would be translated to the WHERE clause \code{WHERE age = 30 AND gender="male"}. If you want to match several values, e.g. \code{params = list(age = c(30,40))} you need to set the argument \code{where.in = TRUE} to construct a correct WHERE clause.
 #' @param sql optional a parameterized custom sql string
-#'   Can contain parameters passed with the `param` arguments.
-#'   E.g. if you have `param = list(myname="Seb")` you could use `myname` an example SQL statement using  as follows:
+#'   Can contain parameters passed with the \code{param} arguments.
+#'   E.g. if you have \code{param = list(myname="Seb")} you could use \code{myname} in an SQL statement as follows:
 #'
 #'    select * from mytable where name = :myname
 #'
 #'   To avoid SQL injection you should provide all values that
 #'   can be provided by a user as such parameters or
 #'   make sure that you escape them.
-#' @param fields If not NULL can be used to specify fields that shall be selected as character. For joined tables, you must enter fields in the format "tablename.field". E.g. `fields = "*, table2.myfield` would select all columns from the first table and the column `myfield` from the joined 2nd table.
-#' @param joinby If you specify more than one table the later tables shall be joined by the variables specified in `joinby` with the first table. For more complicated joins where the names of the join variables differ you have to write custom SQL with the `sql` argument instead.
-#' @param jointype The type of the join if you specify a `joinby` argument. Default is "inner" but can also be set to "left" or "right"
+#' @param fields If not NULL can be used to specify fields that shall be selected as character. For joined tables, you must enter fields in the format "tablename.field". E.g. \code{fields = "*, table2.myfield"} would select all columns from the first table and the column \code{myfield} from the joined 2nd table.
+#' @param joinby If you specify more than one table the later tables shall be joined by the variables specified in \code{joinby} with the first table. For more complicated joins where the names of the join variables differ you have to write custom SQL with the \code{sql} argument instead.
+#' @param jointype The type of the join if you specify a \code{joinby} argument. Default is "inner" but can also be set to "left" or "right"
 #' @param run if FALSE only return parametrized SQL string
 #' @param schema a table schema that can be used to convert values
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
-#' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: `orderby = c("pos DESC","hp ASC")`
+#' @param orderby names of columns the results shall be ordered by as character vector. Add "DESC" or "ASC" after column name to sort descending or ascending. Example: \code{orderby = c("pos DESC","hp ASC")}
 #' @param where.in Set TRUE if your params contain sets and therefore a WHERE IN clause shall be generated.
 #' @param where.sql An optional SQL code just for the WHERE clause. Can be used if some parameters will be checked with inequality.
 #' @param null.as.na shall NULL values be converted to NA values?
 #' @param origin the origin date for DATE and DATETIME conversion
 #' @param empty.as.null if TRUE return just NULL if the query returns zero rows.
-#' @param n The maximum number of rows that shall be fetched. If `n=-1` (DEFAULT) fetch all rows.
+#' @param n The maximum number of rows that shall be fetched. If \code{n=-1} (DEFAULT) fetch all rows.
 dbGet = function(db, table=NULL,params=NULL, sql=NULL, fields=NULL, joinby = NULL, jointype=c("inner","left","right")[1], run = TRUE, schema= if(length(table)==1) schemas[[table]] else NULL, schemas=get.db.schemas(db), rclass=schema$rclass, convert = !is.null(rclass), convert.param=FALSE, orderby=NULL, null.as.na=TRUE, origin = "1970-01-01", where.in=FALSE, where.sql = NULL, empty.as.null=FALSE, n=-1) {
 
 

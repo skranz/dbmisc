@@ -1,0 +1,19 @@
+template:
+  params:
+    bootswatch: cerulean
+navbar:
+  structure:
+    left:
+    - home
+    - reference
+    right: github
+  components:
+    home:
+      icon: fa-home fa-lg
+      href: index.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    github:
+      icon: fa-github fa-lg
+      href: https://github.com/skranz/dbmisc

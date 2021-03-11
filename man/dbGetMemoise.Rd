@@ -4,9 +4,17 @@
 \alias{dbGetMemoise}
 \title{Get results from a database like dbGet put buffer the results in memory}
 \usage{
-dbGetMemoise(db, table, params = NULL, schema = schemas[[table]],
-  schemas = get.db.schemas(db), log.dir = NULL,
-  refetch.if.changed = !is.null(log.dir), empty.as.null = FALSE)
+dbGetMemoise(
+  db,
+  table,
+  params = NULL,
+  schema = schemas[[table]],
+  schemas = get.db.schemas(db),
+  log.dir = NULL,
+  refetch.if.changed = !is.null(log.dir),
+  empty.as.null = FALSE,
+  ...
+)
 }
 \description{
 If the function is called again with the same parameter check if the

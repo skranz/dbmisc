@@ -4,9 +4,14 @@
 \alias{convert.db.to.r}
 \title{Convert data from a database table to R format}
 \usage{
-convert.db.to.r(vals, rclass = schema$rclass, schema = NULL,
-  as.data.frame = is.data.frame(vals), null.as.na = TRUE,
-  origin = "1970-01-01")
+convert.db.to.r(
+  vals,
+  rclass = schema$rclass,
+  schema = NULL,
+  as.data.frame = is.data.frame(vals),
+  null.as.na = TRUE,
+  origin = "1970-01-01"
+)
 }
 \arguments{
 \item{vals}{the values loaded from the database table}

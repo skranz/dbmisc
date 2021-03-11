@@ -4,8 +4,14 @@
 \alias{logDBcommand}
 \title{log a command that changes a database}
 \usage{
-logDBcommand(type, sql = "", user = "NA", log.dir = NULL, table = NULL,
-  do.log = TRUE)
+logDBcommand(
+  type,
+  sql = "",
+  user = "NA",
+  log.dir = NULL,
+  table = NULL,
+  do.log = TRUE
+)
 }
 \description{
 log a command that changes a database

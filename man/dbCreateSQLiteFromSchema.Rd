@@ -4,8 +4,14 @@
 \alias{dbCreateSQLiteFromSchema}
 \title{Create or update a SQLite database from a schema file}
 \usage{
-dbCreateSQLiteFromSchema(schema.file, schema.dir = dirname(schema.file),
-  db.name = NULL, db.dir = schema.dir, update = TRUE)
+dbCreateSQLiteFromSchema(
+  schema.file,
+  schema.dir = dirname(schema.file),
+  db.name = NULL,
+  db.dir = schema.dir,
+  update = TRUE,
+  verbose = 1
+)
 }
 \arguments{
 \item{schema.file}{the dbmisc schema file in yaml format}
@@ -16,7 +22,9 @@ dbCreateSQLiteFromSchema(schema.file, schema.dir = dirname(schema.file),
 
 \item{db.dir}{the directory of the database file, by default the schema directory}
 
-\item{update}{if TRUE (default) copy and update the existing data in the tables. If FALSE just generate empty tables}
+\item{update}{if TRUE copy and update the existing data in the tables. If FALSE just generate empty tables.}
+
+\item{verbose}{if 0 don't show what is done. If 1 or larger show most of the run SQL commands.}
 }
 \description{
 Create or update a SQLite database from a schema file

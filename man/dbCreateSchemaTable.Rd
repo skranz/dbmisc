@@ -4,9 +4,18 @@
 \alias{dbCreateSchemaTable}
 \title{Create database table and possible indices from a simple yaml schema}
 \usage{
-dbCreateSchemaTable(db, table, schema = schemas[[table]],
-  schemas = get.db.schemas(db), schema.yaml = NULL, schema.file = NULL,
-  overwrite = update, silent = FALSE, update = TRUE)
+dbCreateSchemaTable(
+  db,
+  table,
+  schema = schemas[[table]],
+  schemas = get.db.schemas(db),
+  schema.yaml = NULL,
+  schema.file = NULL,
+  overwrite = update,
+  silent = FALSE,
+  update = TRUE,
+  verbose = 1
+)
 }
 \arguments{
 \item{db}{dbi database connection}

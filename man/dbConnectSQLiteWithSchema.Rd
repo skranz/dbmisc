@@ -5,9 +5,11 @@
 \title{Connect to an SQLite db and set
 a schema}
 \usage{
-dbConnectSQLiteWithSchema(dbname,
+dbConnectSQLiteWithSchema(
+  dbname,
   schema.file = paste0(tools::file_path_sans_ext(dbname), ".yaml"),
-  schema = load.and.init.schemas(schema.file))
+  schema = load.and.init.schemas(schema.file)
+)
 }
 \description{
 Connect to an SQLite db and set

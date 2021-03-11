@@ -21,7 +21,8 @@ install.packages("dbmisc",repos = c("https://skranz-repo.github.io/drat/",getOpt
 ## Starting Guide
 
 ### Schema file and creation of database tables
-The example schema [https://github.com/skranz/dbmisc/blob/master/inst/examples/dbschema/userdb.yaml](userdb.yaml) specifies a database with just one table `user` ([https://github.com/skranz/dbmisc/blob/master/inst/examples/dbschema/coursedb.yaml](here) is an example with more than one table):: 
+
+The example schema [userdb.yaml](https://github.com/skranz/dbmisc/blob/master/inst/examples/dbschema/userdb.yaml) specifies a database with just one table `user` ([here](https://github.com/skranz/dbmisc/blob/master/inst/examples/dbschema/coursedb.yaml) is an example with more than one table):
 
 ```yaml
 user:
@@ -121,9 +122,9 @@ Using the schema, the function `dbInsert` conveniently corrects for these differ
   
   ii) it adds a value `descr`filled set to NA, and 
   
-  iii) it removes `gender`.
+  iii) it ignores the `gender` field
 
-This 'autocorrection' allow to avoid some boilerplate code when performing database operations.
+This auto-correction allow to avoid some boilerplate code when performing database operations.
 
 The function `dbInsert` also performs some data type conversions that so far are not automatically performed by the functions in the `DBI` interfaces, e.g. it sets the `POSIXct` variable `created` to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).
 
@@ -135,9 +136,9 @@ dat = dbGet(db,table="user", params=list(userid="user1"))
 ```
 returns a data frame with one row in which `userid` is equal to "user1". Again types are converted to standard R formats. For example, SQLite stores BOOLEANS internally as INTEGER, but based on the schema, `dbGet` will correctly convert the variable `female` to a `logical` variable in R. Also DATETIME variables will be correctly converted to `POSIXct`.
 
-Instead of specifying a table and parameters, you can also provide an sql command to the argument `sql` of dbGet.
+The `dbGet` command allows also for more flexible queries. For example, one can specify selective fields with the argument `fields`. One can also specify multiple tables joint by the columns specified in `joinby`. You can also provide a custom SQL command as the argument `sql`. Even for a custom SQL command you can provide one or multiple tables to use the associated schemas when converting data types.
 
-The function `dbUpdate` and `dbDelete` work in a similar fashion.
+The function `dbUpdate` and `dbDelete` are similar helper functions to update or delete data sets.
 
 ### Logging database modifications
 

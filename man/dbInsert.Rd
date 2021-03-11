@@ -4,12 +4,24 @@
 \alias{dbInsert}
 \title{Insert row(s) into table}
 \usage{
-dbInsert(db, table = NULL, vals, schema = schemas[[table]],
-  schemas = get.db.schemas(db), sql = NULL, run = TRUE,
-  mode = c("insert", "replace")[1], rclass = schema$rclass,
-  convert = !is.null(rclass), primary.key = schema$primary_key,
-  get.key = FALSE, null.as.na = TRUE, log.dir = NULL,
-  do.log = !is.null(log.dir), user = NA)
+dbInsert(
+  db,
+  table = NULL,
+  vals,
+  schema = schemas[[table]],
+  schemas = get.db.schemas(db),
+  sql = NULL,
+  run = TRUE,
+  mode = c("insert", "replace")[1],
+  rclass = schema$rclass,
+  convert = !is.null(rclass),
+  primary.key = schema$primary_key,
+  get.key = FALSE,
+  null.as.na = TRUE,
+  log.dir = NULL,
+  do.log = !is.null(log.dir),
+  user = NA
+)
 }
 \arguments{
 \item{db}{dbi database connection}
