@@ -12,14 +12,10 @@ See the Starting Guide below for examples of the functionality.
 
 ## Installation
 
-`dbmisc` is hosted on Github only. To install it, run the following lines of code:
+`dbmisc` is hosted on my own drat-powered R archive. To install it, run the following code:
 
 ```r
-if (!require(devtools)) install.packages("devtools")
-
-devtools::install_github("skranz/restorepoint")
-devtools::install_github("skranz/stringtools")
-devtools::install_github("skranz/dbmisc")
+install.packages("dbmisc",repos = c("https://skranz-repo.github.io/drat/",getOption("repos")))
 ```
 
 ## Starting Guide
@@ -30,22 +26,24 @@ The example schema [https://github.com/skranz/dbmisc/blob/master/inst/examples/d
 ```yaml
 user:
   table:
-    userid: CHARACTER(20)
-    email: VARCHAR(100)
+    userid: TEXT
+    email: TEXT
     age: INTEGER
     female: BOOLEAN
     created: DATETIME
     descr: TEXT
+  unique_index:
+    - userid
   index:
     - email
     - [female, age]
     - created
-  sql:
-    - "CREATE UNIQUE INDEX index_userid ON user (userid)"
 ```
-Under the field `table`, all columns of the table are specified using the variable types of the database. 
-The field `index` specifies three indices on the table. The second index `[female, age]` is an index on two columns. 
-The field `sql` allows custom SQL commands that will be run when the table is generated. Here we want to generate a special `unique` index on the column `userid`, which requires custom SQL code.
+
+Under the field `table`, all columns of the table are specified using the variable types of the database.
+The field `unique_index` specifies that `userid` is a unique index column, i.e. no two rows with duplicated `userid` can exist in the database.
+
+The field `index` specifies three non-unique indices on the table. The second index `[female, age]` is an index on two columns.
 
 The following R code generates a new SQLite database from this schema in your current working directory:
 ```r
@@ -55,13 +53,14 @@ dbCreateSQLiteFromSchema(schema.file=schema.file, db.dir=db.dir, db.name="userdb
 ```
 You can take a look at the generated database with some software like [https://sqlitestudio.pl](https://sqlitestudio.pl).
 
-Alternatively, if you already have some connection `db` to an existing database, you can create or update existing tables based on your schema file with the command `dbCreateSchemaTables`:
+If you want to update the schema for an existing data base you, can use the argument `update=TRUE`:
 
 ```r
-db = dbConnect(RSQLite::SQLite(), file.path(db.dir, "userdb.sqlite"))
-dbCreateSchemaTables(db=db,schema.file=schema.file,update=TRUE)
+dbCreateSQLiteFromSchema(db=db,schema.file=schema.file,update=TRUE)
 ```
-The argument `update=TRUE` (TRUE is the default value for update), means that if a table with a same name as in the schema already exists, the table is updated given the new schema. The existing data is converted to the new schema. Newly added columns will be filled with NA values. If `update=FALSE`, all existing data is deleted. Of course, for safety reasons always make a backup of your database, before you modify it in this way.
+Then the existing data is converted to the new schema. Newly added columns will be filled with NA values. If `update=FALSE`, all existing data is deleted.
+
+Of course, for safety reasons always make a backup of your database, before you modify it in this way.
 
 It could be the case that you already have some data in R, e.g. from a CSV file, for which you want to generate a database table. To avoid typing the whole schema, you can use the little helper function `schema.template`, which generates a skeleton of the yaml code for the schema and copies it to the clipboard. Consider the following code
 ```r
@@ -69,11 +68,12 @@ df = data.frame(a=1:5,b="hi",c=Sys.Date(),d=Sys.time())
 schema.template(df,"mytable")
 ```
 It copies to your clipboard the following yaml output, which you can the manually adapt
+
 ```yaml
 mytable:
   table:
     a: INTEGER
-    b: VARCHAR(255)
+    b: TEXT
     c: DATE
     d: DATETIME
   index:
@@ -91,6 +91,7 @@ db = set.db.schema(db, schema.file=schema.file)
 ```
 
 The following example inserts an entry into our table `user`:
+
 ```r
 user = list(created=Sys.time(), userid="user1",age=47, female=TRUE, email="test@email.com", gender="female")
 dbInsert(db,table="user", user)
@@ -98,16 +99,31 @@ dbInsert(db,table="user", user)
 
 Recall that the table `user` has been specified with the following columns
 ```
-userid: CHARACTER(20)
-email: VARCHAR(100)
+userid: TEXT
+email: TEXT
 age: INTEGER
 female: BOOLEAN
 created: DATETIME
 descr: TEXT
 ```
-Our R list differs in certain aspects from the table: i) the order of fields is not the same as in the database table, ii) we have not specified the column `descr`, iii) we have an additional value `gender` that is not part of the database. Using the schema, the function `dbInsert` conveniently corrects for these differences: i) orders the values in the right order, ii) it adds a value `descr`filled set to NA, and iii) it removes `gender`.
 
-This 'autocorrection' allow to avoid some boilerplate code when performing database operations. Of course, whether one likes such autocorrections is a matter of taste: I find it quite convenient, but it may also make it harder to catch some errors. 
+Our R list differs in certain aspects from the table: 
+
+  i) the order of fields is not the same as in the database table, 
+  
+  ii) we have not specified the column `descr`
+  
+  iii) we have an additional value `gender` that is not part of the database.
+  
+Using the schema, the function `dbInsert` conveniently corrects for these differences: 
+
+  i) orders the values in the right order, 
+  
+  ii) it adds a value `descr`filled set to NA, and 
+  
+  iii) it removes `gender`.
+
+This 'autocorrection' allow to avoid some boilerplate code when performing database operations.
 
 The function `dbInsert` also performs some data type conversions that so far are not automatically performed by the functions in the `DBI` interfaces, e.g. it sets the `POSIXct` variable `created` to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).
 

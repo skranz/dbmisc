@@ -509,8 +509,8 @@ example.empty.row.schema = function() {
 #' @param toCliboard shall the created text be copied to the clipboard
 schema.template = function(li, name="mytable", toClipboard=TRUE) {
   templ = c(
-    "character" = "VARCHAR(255)",
-    "factor" = "VARCHAR(255)",
+    "character" = "TEXT",
+    "factor" = "TEXT",
     "integer" = "INTEGER",
     "numeric" = "NUMERIC",
     "logical" = "BOOLEAN",

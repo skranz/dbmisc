@@ -2,15 +2,15 @@
 
 user:
   table:
-    userid: CHARACTER(20)
-    email: VARCHAR(100)
+    userid: TEXT
+    email: TEXT
     age: INTEGER
     female: BOOLEAN
     created: DATETIME
     descr: TEXT
+  unique_index:
+    - userid
   index:
     - email
     - [female, age]
     - created
-  sql:
-    - "CREATE UNIQUE INDEX index_userid ON user (userid)"

@@ -2,19 +2,16 @@
 # that might be use to store information about students
 # in online courses.
 
-
 student:
-  # Specify columns
-  # using SQLite data types
   table:
-    email: VARCHAR(100)
+    email: TEXT
     name: TEXT
-    country: VARCHAR(100)
-    city: VARCHAR(100)
+    country: TEXT
+    city: TEXT
     create_time: DATETIME
-  # Specify 3 indices
-  index:
+  unique_index:
     - email
+  index:
     - [country, city]
     - create_time
 
@@ -23,10 +20,8 @@ course:
     courseid: INTEGER
     title: TEXT
     year: INTEGER
-  # Manual SQL that is run if a table is generated or updated
-  # here we specify a unique index
-  sql:
-    - "CREATE UNIQUE INDEX course1 on course (courseid)"
+  unique_index:
+    - courseid
   index:
     - year
 
@@ -34,7 +29,7 @@ course:
 coursestud:
   table:
     courseid: INTEGER
-    email: VARCHAR(100)
+    email: TEXT
   index:
     - courseid
     - email
