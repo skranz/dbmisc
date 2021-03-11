@@ -87,8 +87,12 @@ The functions `dbGet`, `dbInsert`, `dbUpdate` and `dbDelete` allow common databa
 
 The easiest way to use a schema file, is to assign it to a database connection with the command `set.db.schema`
 ```r
-db = dbConnect(RSQLite::SQLite(), file.path(db.dir, "userdb.sqlite"))
+db = dbConnect(RSQLite::SQLite(), "userdb.sqlite")
 db = set.db.schema(db, schema.file=schema.file)
+```
+Or even simpler open the connection and assign the schema with a single command:
+```r
+db = dbConnectSQLiteWithSchema("userdb.sqlite", schema.file)
 ```
 
 The following example inserts an entry into our table `user`:

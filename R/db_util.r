@@ -390,7 +390,7 @@ to.db.datetime = function(val, origin = "1970-01-01") {
 
 #' Convert an R object to a date object that can be used
 #' in a WHERE clause.
-tp.db.date = function(val, origin = "1970-01-01") {
+to.db.date = function(val, origin = "1970-01-01") {
   as.numeric(as.Date(val, origin = origin))
 }
 

@@ -141,11 +141,15 @@
 <p>The functions <code>dbGet</code>, <code>dbInsert</code>, <code>dbUpdate</code> and <code>dbDelete</code> allow common database operations that can use a schema file to facilitate type conversion between R and the database. (So far only tested for SQLite).</p>
 <p>The easiest way to use a schema file, is to assign it to a database connection with the command <code>set.db.schema</code></p>
 <div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="kw">db</span> <span class="op">=</span> <span class="fu">dbConnect</span>(<span class="kw">RSQLite</span>::<span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html">SQLite</a></span>(), <span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span>(<span class="kw">db.dir</span>, <span class="st">"userdb.sqlite"</span>))
+<span class="kw">db</span> <span class="op">=</span> <span class="fu">dbConnect</span>(<span class="kw">RSQLite</span>::<span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html">SQLite</a></span>(), <span class="st">"userdb.sqlite"</span>)
 <span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/set.db.schema.html">set.db.schema</a></span>(<span class="kw">db</span>, schema.file=<span class="kw">schema.file</span>)
 </pre></div>
-<p>The following example inserts an entry into our table <code>user</code>:</p>
+<p>Or even simpler open the connection and assign the schema with a single command:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit">
+<span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/dbConnectSQLiteWithSchema.html">dbConnectSQLiteWithSchema</a></span>(<span class="st">"userdb.sqlite"</span>, <span class="kw">schema.file</span>)
+</pre></div>
+<p>The following example inserts an entry into our table <code>user</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit">
 <span class="kw">user</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(created=<span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html">Sys.time</a></span>(), userid=<span class="st">"user1"</span>,age=<span class="fl">47</span>, female=<span class="fl">TRUE</span>, email=<span class="st">"test@email.com"</span>, gender=<span class="st">"female"</span>)
 <span class="fu"><a href="reference/dbInsert.html">dbInsert</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, <span class="kw">user</span>)
 </pre></div>
@@ -168,7 +172,7 @@ descr: TEXT</code></pre>
 <p>The function <code>dbInsert</code> also performs some data type conversions that so far are not automatically performed by the functions in the <code>DBI</code> interfaces, e.g. it sets the <code>POSIXct</code> variable <code>created</code> to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).</p>
 <p>You can also pass a data.frame to <code>dbInsert</code> in order to insert multiple rows at once.</p>
 <p>The function <code>dbGet</code> retrieves data from the database. E.g. the command</p>
-<div class="sourceCode" id="cb10"><pre class="downlit">
+<div class="sourceCode" id="cb11"><pre class="downlit">
 <span class="kw">dat</span> <span class="op">=</span> <span class="fu"><a href="reference/dbGet.html">dbGet</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, params=<span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(userid=<span class="st">"user1"</span>))
 </pre></div>
 <p>returns a data frame with one row in which <code>userid</code> is equal to “user1”. Again types are converted to standard R formats. For example, SQLite stores BOOLEANS internally as INTEGER, but based on the schema, <code>dbGet</code> will correctly convert the variable <code>female</code> to a <code>logical</code> variable in R. Also DATETIME variables will be correctly converted to <code>POSIXct</code>.</p>
