@@ -1,4 +1,4 @@
-## Brief Overview
+## The dbmisc package for using SQLite more conveniently in R
 
 Author: Sebastian Kranz, Ulm University
 
@@ -6,19 +6,17 @@ The package `dbmisc` contains some helper functions to work with databases, e.g.
 
 For this purpose you can specify a schema of your database as a simple YAML file. With the schema file you can also easily create or update database tables.
 
-There is further functionality that allows automatic logs of database operations and memoization of fetched values.
-
-See the Starting Guide below for examples of the functionality.
+There is further functionality that allows automatic logs of database operations and memoization of fetched values. Basic usage is explaned in this README file.
 
 ## Installation
 
 `dbmisc` is hosted on my own drat-powered R archive. To install it, run the following code:
 
-```r
-install.packages("dbmisc",repos = c("https://skranz-repo.github.io/drat/",getOption("repos")))
-```
 
-## Starting Guide
+```r
+install.packages("dbmisc",
+  repos = c("https://skranz-repo.github.io/drat/",getOption("repos")))
+```
 
 ### Schema file and creation of database tables
 
@@ -47,6 +45,7 @@ The field `unique_index` specifies that `userid` is a unique index column, i.e. 
 The field `index` specifies three non-unique indices on the table. The second index `[female, age]` is an index on two columns.
 
 The following R code generates a new SQLite database from this schema in your current working directory:
+
 ```r
 schema.file = system.file("examples/dbschema/userdb.yaml", package="dbmisc")
 db.dir = getwd()
@@ -64,10 +63,13 @@ Then the existing data is converted to the new schema. Newly added columns will 
 Of course, for safety reasons always make a backup of your database, before you modify it in this way.
 
 It could be the case that you already have some data in R, e.g. from a CSV file, for which you want to generate a database table. To avoid typing the whole schema, you can use the little helper function `schema.template`, which generates a skeleton of the yaml code for the schema and copies it to the clipboard. Consider the following code
+
+
 ```r
 df = data.frame(a=1:5,b="hi",c=Sys.Date(),d=Sys.time())
 schema.template(df,"mytable")
 ```
+
 It copies to your clipboard the following yaml output, which you can the manually adapt
 
 ```yaml
@@ -81,25 +83,34 @@ mytable:
     - a # example index on first column
 ```
 
-### Database operations with a schema file
+### Adding a schema file to a data base connection
 
 The functions `dbGet`, `dbInsert`, `dbUpdate` and `dbDelete` allow common database operations that can use a schema file to facilitate type conversion between R and the database. (So far only tested for SQLite).
 
 The easiest way to use a schema file, is to assign it to a database connection with the command `set.db.schema`
+
+
 ```r
-db = dbConnect(RSQLite::SQLite(), "userdb.sqlite")
+db = dbConnect(RSQLite::SQLite(), file.path(db.dir, "userdb.sqlite"))
 db = set.db.schema(db, schema.file=schema.file)
 ```
+
 Or even simpler open the connection and assign the schema with a single command:
+
+
 ```r
 db = dbConnectSQLiteWithSchema("userdb.sqlite", schema.file)
 ```
 
+
+### Inserting data
+
 The following example inserts an entry into our table `user`:
 
+
 ```r
-user = list(created=Sys.time(), userid="user1",age=47, female=TRUE, email="test@email.com", gender="female")
-dbInsert(db,table="user", user)
+new_user = list(created=Sys.time(), userid="user1",age=47, female=TRUE, email="test@email.com", gender="female")
+dbInsert(db,table="user", new_user)
 ```
 
 Recall that the table `user` has been specified with the following columns
@@ -126,23 +137,75 @@ Using the schema, the function `dbInsert` conveniently corrects for these differ
   
   ii) it adds a value `descr`filled set to NA, and 
   
-  iii) it ignores the `gender` field
+  iii) it removes `gender`.
 
-This auto-correction allow to avoid some boilerplate code when performing database operations.
+This 'autocorrection' allows to avoid some boilerplate code when performing database operations.
 
-The function `dbInsert` also performs some data type conversions that so far are not automatically performed by the functions in the `DBI` interfaces, e.g. it sets the `POSIXct` variable `created` to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).
+The function `dbInsert` also performs some data type conversions that seem not automatically performed by the functions in the `DBI` interfaces, e.g. it sets the `POSIXct` variable `created` to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).
 
-You can also pass a data.frame to `dbInsert` in order to insert multiple rows at once.
+You can also pass a data frame to `dbInsert` in order to insert multiple rows at once.
+
+If you set the argument `run=FALSE`, `dbInsert` performs no data base action but just returns the SQL statement that would be run: 
+
+```r
+dbInsert(db,table="user", new_user,run = FALSE)
+```
+
+```
+## [1] "insert into user values (:userid, :email, :age, :female, :created, :descr)"
+```
+Note that `dbmisc` prepares by default [parametrized queries](https://db.rstudio.com/best-practices/run-queries-safely/#parameterized-queries) to avoid [SQL-injections](https://db.rstudio.com/best-practices/run-queries-safely).
+
+
+### Getting data with dbGet
 
 The function `dbGet` retrieves data from the database. E.g. the command
+
+
 ```r
-dat = dbGet(db,table="user", params=list(userid="user1"))
+dat = dbGet(db,table="user", list(userid="user1"))
 ```
+
 returns a data frame with one row in which `userid` is equal to "user1". Again types are converted to standard R formats. For example, SQLite stores BOOLEANS internally as INTEGER, but based on the schema, `dbGet` will correctly convert the variable `female` to a `logical` variable in R. Also DATETIME variables will be correctly converted to `POSIXct`.
 
-The `dbGet` command allows also for more flexible queries. For example, one can specify selective fields with the argument `fields`. One can also specify multiple tables joint by the columns specified in `joinby`. You can also provide a custom SQL command as the argument `sql`. Even for a custom SQL command you can provide one or multiple tables to use the associated schemas when converting data types.
+If you set the argument `run=FALSE`, you can get the SQL query that `dbGet` runs:
 
-The function `dbUpdate` and `dbDelete` are similar helper functions to update or delete data sets.
+
+```r
+dbGet(db,table="user", list(userid="user1"), run = FALSE)
+```
+
+```
+## [1] "SELECT * FROM user WHERE userid = :userid"
+```
+
+
+The `dbGet` command allows also for more flexible queries. For example, one can specify selective fields with the argument `fields`. One can also specify multiple tables joint by the columns specified in `joinby`:
+
+
+```r
+dbGet(db,c("course","coursestud"), list(courseid="course1"),
+      fields = "*, coursestud.email", joinby=c("courseid"), run = FALSE)
+```
+
+```
+## [1] "SELECT *, coursestud.email FROM course INNER JOIN coursestud USING(courseid) WHERE courseid = :courseid"
+```
+
+You can also provide a custom SQL command as the argument `sql`:
+
+
+```r
+sql = "SELECT *, coursestud.email FROM course INNER JOIN coursestud USING(courseid) WHERE courseid = :courseid"
+
+dbGet(db,table=c("course","coursestud"),list(courseid="course1"),sql=sql)
+```
+
+Even for a custom SQL command you can provide one or multiple tables to use the associated schemas when converting data types and parameters that will be used in the parametrized query. 
+
+### dbUpdate and dbDelete
+
+The function [dbUpdate](https://skranz.github.io/dbmisc/reference/dbUpdate.html) and [dbDelete](https://skranz.github.io/dbmisc/reference/dbDelete.html) are similar helper functions to update or delete data sets.
 
 ### Logging database modifications
 

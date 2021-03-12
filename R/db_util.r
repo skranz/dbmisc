@@ -1,7 +1,15 @@
 .dbmisc.memoise.env = new.env()
 
-#' Connect to an SQLite db and set
-#' a schema
+#' Creates a connection to an SQLite database and sets
+#' the specified schema
+#'
+#' The schema is added as attribute to the connection
+#' object and is automatically used by \code{dbInsert},
+#' \code{dbGet}, and \code{dbUpdate}.
+#'
+#' @param dbname Filename of the SQLite database
+#' @param schema.file YAML file that contains the database schema. By default it is assumed to be in the same folder as the database with the same name but the extension ".yaml"
+#' @param schema If you already loaded a schema file manually with \code{load.and.init.schemas}, you can also provide it here instead of specifying a schema.file.
 dbConnectSQLiteWithSchema = function(dbname, schema.file=paste0(tools::file_path_sans_ext(dbname),".yaml"), schema=load.and.init.schemas(schema.file)) {
   db = dbConnect(RSQLite::SQLite(),dbname)
   db = set.db.schemas(db, schema)
@@ -220,7 +228,7 @@ dbGet = function(db, table=NULL,params=NULL, sql=NULL, fields=NULL, joinby = NUL
 
   # We may use schemas from multiple tables in complex
   # sql statements
-  if (is.null(schema) & length(table)>1 & !is.null(schemas)) {
+  if (is.null(schema) & length(table)>1 & !is.null(schemas) & run) {
     schema = list(rclass = unlist(lapply(schemas[table], function(s) s$rclass)))
     names(schema$rclass) = str.right.of(names(schema$rclass),".")
     dupl = duplicated(names(schema$rclass))

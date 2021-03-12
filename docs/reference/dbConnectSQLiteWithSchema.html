@@ -6,8 +6,8 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Connect to an SQLite db and set
-a schema — dbConnectSQLiteWithSchema • dbmisc</title>
+<title>Creates a connection to an SQLite database and sets
+the specified schema — dbConnectSQLiteWithSchema • dbmisc</title>
 
 
 <!-- jquery -->
@@ -40,10 +40,11 @@ a schema — dbConnectSQLiteWithSchema • dbmisc</title>
 
 
 
-<meta property="og:title" content="Connect to an SQLite db and set
-a schema — dbConnectSQLiteWithSchema" />
-<meta property="og:description" content="Connect to an SQLite db and set
-a schema" />
+<meta property="og:title" content="Creates a connection to an SQLite database and sets
+the specified schema — dbConnectSQLiteWithSchema" />
+<meta property="og:description" content="The schema is added as attribute to the connection
+object and is automatically used by dbInsert,
+dbGet, and dbUpdate." />
 
 
 
@@ -111,15 +112,16 @@ a schema" />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Connect to an SQLite db and set
-a schema</h1>
+    <h1>Creates a connection to an SQLite database and sets
+the specified schema</h1>
     
     <div class="hidden name"><code>dbConnectSQLiteWithSchema.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Connect to an SQLite db and set
-a schema</p>
+    <p>The schema is added as attribute to the connection
+object and is automatically used by <code>dbInsert</code>,
+<code>dbGet</code>, and <code>dbUpdate</code>.</p>
     </div>
 
     <pre class="usage"><span class='fu'>dbConnectSQLiteWithSchema</span>(
@@ -128,6 +130,22 @@ a schema</p>
   schema = <span class='fu'><a href='load.and.init.schemas.html'>load.and.init.schemas</a></span>(<span class='kw'>schema.file</span>)
 )</pre>
 
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>dbname</th>
+      <td><p>Filename of the SQLite database</p></td>
+    </tr>
+    <tr>
+      <th>schema.file</th>
+      <td><p>YAML file that contains the database schema. By default it is assumed to be in the same folder as the database with the same name but the extension ".yaml"</p></td>
+    </tr>
+    <tr>
+      <th>schema</th>
+      <td><p>If you already loaded a schema file manually with <code>load.and.init.schemas</code>, you can also provide it here instead of specifying a schema.file.</p></td>
+    </tr>
+    </table>
 
 
   </div>

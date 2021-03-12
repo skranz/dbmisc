@@ -2,8 +2,8 @@
 % Please edit documentation in R/db_util.r
 \name{dbConnectSQLiteWithSchema}
 \alias{dbConnectSQLiteWithSchema}
-\title{Connect to an SQLite db and set
-a schema}
+\title{Creates a connection to an SQLite database and sets
+the specified schema}
 \usage{
 dbConnectSQLiteWithSchema(
   dbname,
@@ -11,7 +11,15 @@ dbConnectSQLiteWithSchema(
   schema = load.and.init.schemas(schema.file)
 )
 }
+\arguments{
+\item{dbname}{Filename of the SQLite database}
+
+\item{schema.file}{YAML file that contains the database schema. By default it is assumed to be in the same folder as the database with the same name but the extension ".yaml"}
+
+\item{schema}{If you already loaded a schema file manually with \code{load.and.init.schemas}, you can also provide it here instead of specifying a schema.file.}
+}
 \description{
-Connect to an SQLite db and set
-a schema
+The schema is added as attribute to the connection
+object and is automatically used by \code{dbInsert},
+\code{dbGet}, and \code{dbUpdate}.
 }
