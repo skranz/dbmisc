@@ -126,6 +126,7 @@
   sql = <span class='kw'>NULL</span>,
   run = <span class='fl'>TRUE</span>,
   mode = <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"insert"</span>, <span class='st'>"replace"</span>)[<span class='fl'>1</span>],
+  add.missing.cols = <span class='fl'>TRUE</span>,
   rclass = <span class='kw'>schema</span><span class='op'>$</span><span class='kw'>rclass</span>,
   convert = <span class='op'>!</span><span class='fu'><a href='https://rdrr.io/r/base/NULL.html'>is.null</a></span>(<span class='kw'>rclass</span>),
   primary.key = <span class='kw'>schema</span><span class='op'>$</span><span class='kw'>primary_key</span>,
@@ -166,6 +167,10 @@
     <tr>
       <th>mode</th>
       <td><p>"insert" or "replace", should have no effect so far</p></td>
+    </tr>
+    <tr>
+      <th>add.missing.cols</th>
+      <td><p>if TRUE (default) and a schema is provided than automatically add database columns that are missing in <code>vals</code> and set them NA.</p></td>
     </tr>
     <tr>
       <th>rclass</th>

@@ -74,11 +74,12 @@ logDBcommand = function(type, sql="", user="NA", log.dir=NULL, table=NULL, do.lo
 #' @param sql optional a parameterized sql string
 #' @param run if FALSE only return parametrized SQL string
 #' @param mode "insert" or "replace", should have no effect so far
+#' @param add.missing.cols if TRUE (default) and a schema is provided than automatically add database columns that are missing in \code{vals} and set them NA.
 #' @param rclass the r class of the table columns, is extracted from schema
 #' @param convert if rclass is given shall results automatically be converted to these classes?
 #' @param primary.key name of the primary key column (if the table has one)
 #' @param get.key if TRUE return the created primary key value
-dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE, mode=c("insert","replace")[1], rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
+dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db.schemas(db), sql=NULL,run=TRUE, mode=c("insert","replace")[1], add.missing.cols=TRUE, rclass=schema$rclass, convert=!is.null(rclass), primary.key = schema$primary_key, get.key=FALSE, null.as.na=TRUE, log.dir=NULL, do.log=!is.null(log.dir), user=NA) {
   restore.point("dbInsert")
 
   # Nothing to insert
@@ -86,7 +87,7 @@ dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db
 
   # Update vals based on table schema
   if (isTRUE(convert)) {
-    vals = convert.r.to.db(vals=vals,rclass = rclass,schema = schema,null.as.na = null.as.na)
+    vals = convert.r.to.db(vals=vals,rclass = rclass,schema = schema,null.as.na = null.as.na,add.missing = add.missing.cols)
   }
   cols = names(vals)
 
@@ -107,10 +108,12 @@ dbInsert = function(db, table=NULL, vals,schema=schemas[[table]], schemas=get.db
       if (has.substr(msg,"were supplied")) {
         db.cols = dbTableCols(db, table)$name
         missing = setdiff(db.cols,names(vals))
-        if (length(missing)==0) {
-          msg = paste0(msg, "\nCompared to your database the following columns are missing in your provided data set: ", paste0(missing, collapse=", "))
-          if (!is.null(schema$table)) {
-            msg = paste0(msg, "\nPossibly your DB is not updated according to the current schema. Make sure to restart R and then call dbmisc::dbCreateSQLiteFromSchema(update=TRUE, ...).")
+        if (length(missing)>0) {
+          msg = paste0(msg, "\nCompared to your database the following columns are missing in your provided data set:\n\n", paste0(missing, collapse=", "))
+          if (is.null(schema$table) & add.missing.cols) {
+            msg = "\nYou did not specify a schema so that missing columns were not automatically filld with NA."
+          } else if (add.missing.cols) {
+            msg = paste0(msg, "\n\nLikely, you get this message because your DB is not synchronized with your current schema. Make sure to restart R and then call dbmisc::dbCreateSQLiteFromSchema(update=TRUE, ...).")
           }
         }
       }
@@ -289,8 +292,10 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
   restore.point("convert.db.to.r")
 
   names = names(rclass)
+  if (is.data.frame(vals) & NROW(vals)==0) return(vals)
+
   res = suppressWarnings(lapply(names, function(name) {
-    #restore.point("hsfhkdhfkd")
+    restore.point("hsfhkdhfkd")
     val = vals[[name]]
     if (is.null(val) & null.as.na) val = NA
     if (length(val)==0) {
@@ -308,13 +313,6 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
         res[is.na(res)] = as.logical(as.numeric(val[is.na(res)]))
         return(res)
       }
-
-      # Blobs are converted via serialize and unserialize
-      #if (rclass[[name]]=="blob") {
-      #  res = unserialize(val)
-      #  return(res)
-      #}
-
 
       # If DATE and DATETIME are stored as numeric, we need an origin for conversion
       if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
@@ -369,13 +367,11 @@ convert.r.to.db = function(vals, rclass=schema$rclass, schema=NULL, null.as.na=T
       #  return(I(serialize(val, connection=NULL)))
       #}
 
-      # If DATE and DATETIME are NA, we need an origin for conversion
-      if ( ((is.na(val)) | is.numeric(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
-        if (rclass[[name]]=="Date") {
-          as.Date(val,  origin = origin)
-        } else {
-          as.POSIXct(val, origin = origin)
-        }
+      # Use origin for DATE and DATETIME conversion
+      if (rclass[[name]]=="Date") {
+        as.Date(val,  origin = origin)
+      } else if (rclass[[name]] =="POSIXct") {
+        as.POSIXct(val, origin = origin)
       } else {
         as(val,rclass[[name]])
       }

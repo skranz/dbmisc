@@ -25,10 +25,12 @@ dbCreateSQLiteFromSchema = function(schema.file, schema.dir=dirname(schema.file)
 
   library(RSQLite)
   db = dbConnect(RSQLite::SQLite(),dbname=db.file)
-  dbCreateSchemaTables(db,schemas = schemas, update=update, verbose=verbose)
+  dbCreateSchemaTables(db,schemas = schemas, update=update,overwrite=TRUE, verbose=verbose)
   dbDisconnect(db)
-  if (did.exist) {
-    cat("\nModified the existing data base ",db.file)
+  if (did.exist & update) {
+    cat("\nUpdated existing data base ",db.file)
+  } else if (did.exist) {
+    cat("\nOverwrote the existing data base ",db.file)
   } else {
     cat("\nGenerated the new data base ",db.file)
   }

@@ -13,6 +13,7 @@ dbInsert(
   sql = NULL,
   run = TRUE,
   mode = c("insert", "replace")[1],
+  add.missing.cols = TRUE,
   rclass = schema$rclass,
   convert = !is.null(rclass),
   primary.key = schema$primary_key,
@@ -37,6 +38,8 @@ dbInsert(
 \item{run}{if FALSE only return parametrized SQL string}
 
 \item{mode}{"insert" or "replace", should have no effect so far}
+
+\item{add.missing.cols}{if TRUE (default) and a schema is provided than automatically add database columns that are missing in \code{vals} and set them NA.}
 
 \item{rclass}{the r class of the table columns, is extracted from schema}
 
