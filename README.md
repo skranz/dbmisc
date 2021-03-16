@@ -83,25 +83,39 @@ mytable:
     - a # example index on first column
 ```
 
-### Adding a schema file to a data base connection
+### Opening a data base connection with a schema
 
 The functions `dbGet`, `dbInsert`, `dbUpdate` and `dbDelete` allow common database operations that can use a schema file to facilitate type conversion between R and the database. (So far only tested for SQLite).
 
-The easiest way to use a schema file, is to assign it to a database connection with the command `set.db.schema`
-
-
-```r
-db = dbConnect(RSQLite::SQLite(), file.path(db.dir, "userdb.sqlite"))
-db = set.db.schema(db, schema.file=schema.file)
-```
-
-Or even simpler open the connection and assign the schema with a single command:
+The easiest way to use a schema file, is to open the connection and assign the schema with a single command:
 
 
 ```r
 db = dbConnectSQLiteWithSchema("userdb.sqlite", schema.file)
 ```
 
+Alternatively, you could also assign a schema to an existing database connection with the command `set.db.schema`
+
+```r
+db = set.db.schema(db, schema.file=schema.file)
+```
+
+I typically write for my shiny apps a little function to get the database connection, like:
+
+```r
+get.userdb = function(db.dir=getwd()) {
+  db = getOption("userdb.connection")
+  if (is.null(db)) {
+    schema.file = system.file("schema/userdb.yaml",package = "shinyUserDB")
+    db.file = file.path(db.dir, "userdb.sqlite") 
+    db = dbConnectSQLiteWithSchema(db.file,schema.file)
+    options(userdb.connection=db)
+  }
+  db
+}
+```
+
+The function opens just a single database connection that is used by all app instances and stores it as a global option. If the connection is already open and the function is called again, the connection is retrieved from a global option. I am not sure whether there is any benefit from [pooling](https://db.rstudio.com/pool/) more than one connection with SQLite.
 
 ### Inserting data
 

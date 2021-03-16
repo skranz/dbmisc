@@ -131,25 +131,38 @@
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">index</span><span class="kw">:</span></span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> a</span><span class="co"> # example index on first column</span></span></code></pre></div>
 </div>
-<div id="adding-a-schema-file-to-a-data-base-connection" class="section level3">
+<div id="opening-a-data-base-connection-with-a-schema" class="section level3">
 <h3 class="hasAnchor">
-<a href="#adding-a-schema-file-to-a-data-base-connection" class="anchor"></a>Adding a schema file to a data base connection</h3>
+<a href="#opening-a-data-base-connection-with-a-schema" class="anchor"></a>Opening a data base connection with a schema</h3>
 <p>The functions <code>dbGet</code>, <code>dbInsert</code>, <code>dbUpdate</code> and <code>dbDelete</code> allow common database operations that can use a schema file to facilitate type conversion between R and the database. (So far only tested for SQLite).</p>
-<p>The easiest way to use a schema file, is to assign it to a database connection with the command <code>set.db.schema</code></p>
+<p>The easiest way to use a schema file, is to open the connection and assign the schema with a single command:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="kw">db</span> <span class="op">=</span> <span class="fu">dbConnect</span>(<span class="kw">RSQLite</span>::<span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html">SQLite</a></span>(), <span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span>(<span class="kw">db.dir</span>, <span class="st">"userdb.sqlite"</span>))
-<span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/set.db.schema.html">set.db.schema</a></span>(<span class="kw">db</span>, schema.file=<span class="kw">schema.file</span>)
-</pre></div>
-<p>Or even simpler open the connection and assign the schema with a single command:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit">
 <span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/dbConnectSQLiteWithSchema.html">dbConnectSQLiteWithSchema</a></span>(<span class="st">"userdb.sqlite"</span>, <span class="kw">schema.file</span>)
 </pre></div>
+<p>Alternatively, you could also assign a schema to an existing database connection with the command <code>set.db.schema</code></p>
+<div class="sourceCode" id="cb8"><pre class="downlit">
+<span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/set.db.schema.html">set.db.schema</a></span>(<span class="kw">db</span>, schema.file=<span class="kw">schema.file</span>)
+</pre></div>
+<p>I typically write for my apps a little function to get the database connection, like:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit">
+<span class="kw">get.userdb</span> <span class="op">=</span> <span class="fu">function</span>(<span class="kw">db.dir</span>=<span class="fu"><a href="https://rdrr.io/r/base/getwd.html">getwd</a></span>()) {
+  <span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html">getOption</a></span>(<span class="st">"userdb.connection"</span>)
+  <span class="co">if</span> (<span class="fu"><a href="https://rdrr.io/r/base/NULL.html">is.null</a></span>(<span class="kw">db</span>)) {
+    <span class="kw">schema.file</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span>(<span class="st">"schema/userdb.yaml"</span>,package = <span class="st">"shinyUserDB"</span>)
+    <span class="kw">db.file</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span>(<span class="kw">db.dir</span>, <span class="st">"userdb.sqlite"</span>) 
+    <span class="kw">db</span> <span class="op">=</span> <span class="fu"><a href="reference/dbConnectSQLiteWithSchema.html">dbConnectSQLiteWithSchema</a></span>(<span class="kw">db.file</span>,<span class="kw">schema.file</span>)
+    <span class="fu"><a href="https://rdrr.io/r/base/options.html">options</a></span>(userdb.connection=<span class="kw">db</span>)
+  }
+  <span class="kw">db</span>
+}
+</pre></div>
+<p>The function opens just a single database connection. If the connection is already open and the function is called again, it retrieves the connection from a global option. (I am not sure whether there is any benefit from <a href="https://db.rstudio.com/pool/">pooling</a> more than one connection with SQLite.)</p>
 </div>
 <div id="inserting-data" class="section level3">
 <h3 class="hasAnchor">
 <a href="#inserting-data" class="anchor"></a>Inserting data</h3>
 <p>The following example inserts an entry into our table <code>user</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit">
+<div class="sourceCode" id="cb10"><pre class="downlit">
 <span class="kw">new_user</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(created=<span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html">Sys.time</a></span>(), userid=<span class="st">"user1"</span>,age=<span class="fl">47</span>, female=<span class="fl">TRUE</span>, email=<span class="st">"test@email.com"</span>, gender=<span class="st">"female"</span>)
 <span class="fu"><a href="reference/dbInsert.html">dbInsert</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, <span class="kw">new_user</span>)
 </pre></div>
@@ -172,7 +185,7 @@ descr: TEXT</code></pre>
 <p>The function <code>dbInsert</code> also performs some data type conversions that seem not automatically performed by the functions in the <code>DBI</code> interfaces, e.g. it sets the <code>POSIXct</code> variable <code>created</code> to a DATETIME format that can be stored retrieved from the SQLite database (as SQLite does not really have a DATETIME format it is stored as a floating point number).</p>
 <p>You can also pass a data frame to <code>dbInsert</code> in order to insert multiple rows at once.</p>
 <p>If you set the argument <code>run=FALSE</code>, <code>dbInsert</code> performs no data base action but just returns the SQL statement that would be run:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit">
+<div class="sourceCode" id="cb12"><pre class="downlit">
 <span class="fu"><a href="reference/dbInsert.html">dbInsert</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, <span class="kw">new_user</span>,run = <span class="fl">FALSE</span>)
 </pre></div>
 <pre><code>## [1] "insert into user values (:userid, :email, :age, :female, :created, :descr)"</code></pre>
@@ -182,23 +195,23 @@ descr: TEXT</code></pre>
 <h3 class="hasAnchor">
 <a href="#getting-data-with-dbget" class="anchor"></a>Getting data with dbGet</h3>
 <p>The function <code>dbGet</code> retrieves data from the database. E.g. the command</p>
-<div class="sourceCode" id="cb13"><pre class="downlit">
+<div class="sourceCode" id="cb14"><pre class="downlit">
 <span class="kw">dat</span> <span class="op">=</span> <span class="fu"><a href="reference/dbGet.html">dbGet</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(userid=<span class="st">"user1"</span>))
 </pre></div>
 <p>returns a data frame with one row in which <code>userid</code> is equal to “user1”. Again types are converted to standard R formats. For example, SQLite stores BOOLEANS internally as INTEGER, but based on the schema, <code>dbGet</code> will correctly convert the variable <code>female</code> to a <code>logical</code> variable in R. Also DATETIME variables will be correctly converted to <code>POSIXct</code>.</p>
 <p>If you set the argument <code>run=FALSE</code>, you can get the SQL query that <code>dbGet</code> runs:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit">
+<div class="sourceCode" id="cb15"><pre class="downlit">
 <span class="fu"><a href="reference/dbGet.html">dbGet</a></span>(<span class="kw">db</span>,table=<span class="st">"user"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(userid=<span class="st">"user1"</span>), run = <span class="fl">FALSE</span>)
 </pre></div>
 <pre><code>## [1] "SELECT * FROM user WHERE userid = :userid"</code></pre>
 <p>The <code>dbGet</code> command allows also for more flexible queries. For example, one can specify selective fields with the argument <code>fields</code>. One can also specify multiple tables joint by the columns specified in <code>joinby</code>:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit">
+<div class="sourceCode" id="cb17"><pre class="downlit">
 <span class="fu"><a href="reference/dbGet.html">dbGet</a></span>(<span class="kw">db</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"course"</span>,<span class="st">"coursestud"</span>), <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(courseid=<span class="st">"course1"</span>),
       fields = <span class="st">"*, coursestud.email"</span>, joinby=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"courseid"</span>), run = <span class="fl">FALSE</span>)
 </pre></div>
 <pre><code>## [1] "SELECT *, coursestud.email FROM course INNER JOIN coursestud USING(courseid) WHERE courseid = :courseid"</code></pre>
 <p>You can also provide a custom SQL command as the argument <code>sql</code>:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit">
+<div class="sourceCode" id="cb19"><pre class="downlit">
 <span class="kw">sql</span> <span class="op">=</span> <span class="st">"SELECT *, coursestud.email FROM course INNER JOIN coursestud USING(courseid) WHERE courseid = :courseid"</span>
 
 <span class="fu"><a href="reference/dbGet.html">dbGet</a></span>(<span class="kw">db</span>,table=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"course"</span>,<span class="st">"coursestud"</span>),<span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(courseid=<span class="st">"course1"</span>),sql=<span class="kw">sql</span>)
