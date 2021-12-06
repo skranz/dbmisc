@@ -546,7 +546,15 @@ schema.template = function(li, name="mytable", toClipboard=TRUE) {
   })
   txt = paste0(c(txt,stxt), collapse="\n")
   if (toClipboard) {
-    writeClipboard(txt)
+    if (.Platform$OS.type == "windows") {
+      writeClipboard(txt)
+    } else {
+      if (require(clipr)) {
+        clipr::write_clip(txt)
+      } else {
+        cat("\nTo write to clipboard on a non-windows OS, please first install the package 'clipr'.")
+      }
+    }
   }
   cat(txt)
   invisible(txt)
