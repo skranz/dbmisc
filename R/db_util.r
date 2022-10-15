@@ -315,8 +315,8 @@ convert.db.to.r = function(vals, rclass=schema$rclass, schema=NULL, as.data.fram
       }
 
       # If DATE and DATETIME are stored as numeric, we need an origin for conversion
-      if ((is.numeric(val) | is.na(val)) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
-        if (is.na(val)) val = NA_real_
+      if ((is.numeric(val) | all(is.na(val))) & (rclass[[name]] =="Date" | rclass[[name]] =="POSIXct")) {
+        if (all(is.na(val))) val = NA_real_
         if (rclass[[name]]=="Date") {
           as.Date(val,  origin = origin)
         } else {
